@@ -1,9 +1,2 @@
-import os
-
-
-
-# %%
-print('Prova')
-
 
 # %%
