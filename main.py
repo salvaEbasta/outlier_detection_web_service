@@ -44,7 +44,8 @@ def model_handling(model):
         else:
             abort(405)
     except Exception as e:
-        return {'error':type(e), 'description':e.__str__()}, 500
+        print(e)
+        return {'error': '{}'.format(type(e)), 'description': str(e)}, 500
 
 @app.route('/test')
 def route_test():
