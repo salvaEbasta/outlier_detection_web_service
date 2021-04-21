@@ -15,7 +15,7 @@
             "name": "microservice start",
             "type": "python",
             "request": "launch",
-            "program": "main.py",
+            "program": "ml_microservice\\microservice.py",
             "console": "integratedTerminal"
         }
     ]
