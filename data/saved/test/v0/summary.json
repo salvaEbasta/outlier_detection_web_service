@@ -1,1 +1,1 @@
-{"status": "not ready", "created_on": "2021-04-21T17:07:55.289846", "architecture": null, "model": "test", "datasets": ["jena_climate_2009_2016.csv"]}
+{"status": "active", "created_on": "2021-05-04T16:19:59.464032", "training_time": 0.7916727066040039, "dataset": "jena_T_test.csv", "column": "T (degC)", "regression_performance": 1.6483515501022339}
