@@ -24,6 +24,7 @@ STATUS = dict(active='active', training='under training')
 
 class DetectorsLibrary():
     def __init__(self, storage_path=conf['Series']['path']):
+        print("Debug, in detector")
         self.storage = storage_path
         self.version_format = strings.version_format
         self.detector_summary = strings.model_summary_file
@@ -218,6 +219,7 @@ class AnomalyDetection():
             output: list of anomalies\n
             Assumption: the data comes from the <dataset>, <column> on which the model was originally trained\n
         """
+        print("Debug: predict")
         if self._check_status_and_load():
             return self._predict(data)
         else:
@@ -263,7 +265,7 @@ class AnomalyDetection():
         # Detector training
         print(f"[*] Training with new data ...")
         t0 = time.time()
-        self._detector.fit(*preprocessor.train)
+        self._detector.fit(*preprocessor.train, epochs=epochs)
         tDelta = time.time() - t0
         print(f"[.] Total time: {tDelta}")
 
@@ -279,6 +281,7 @@ class AnomalyDetection():
             new_data_points=len(train),
             training_time=tDelta,
             regression_performance=float(regression_performance),
+            epochs=epochs,
         )
 
     def update(self, data, epochs=1):

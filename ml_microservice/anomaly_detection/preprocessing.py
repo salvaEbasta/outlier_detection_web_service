@@ -2,14 +2,24 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
-def split(dataframe, dev=True):
-    """dataframe -> train, dev, test (porzione, no X o y)"""
-    # TODO: le finestre che sto creando in test (e dev) mi fanno perdere degli istanti preziosi. Aggiorna la procedura
+def split(dataframe, dev=True, window_size=0):
+    """
+        dataframe -> train, dev, test (porzione, no X o y)\n
+        if window_size is specified, dev and test will overlap the previous set.
+    """
+    if window_size < 0:
+        raise ValueError('Window size has to be a value greater than 0')
+    elif window_size > len(dataframe):
+        raise ValueError(f'Window size ({window_size}) exceed dataframe length ({len(dataframe)})')
+    
     n = len(dataframe)
     if dev:
-        return dataframe[:int(n*.7)], dataframe[int(n*.7):int(n*.9)], dataframe[int(n*.9):]
+        return dataframe[:int(n*.7)], \
+            dataframe[int(n*.7) - window_size:int(n*.9)], \
+            dataframe[int(n*.9) - window_size:]
     else:
-        return dataframe[:int(n*.9)], dataframe[int(n*.9):]
+        return dataframe[:int(n*.9)], \
+            dataframe[int(n*.9) - window_size:]
 
 class Preprocessor():
     """Class to preprocess datasets that contains a sequence.
@@ -53,9 +63,22 @@ class Preprocessor():
             data = (data - self._mean)
         # Make windows
         X, y = self.extract_windows(data)
-        # Introduce noise
         return X, y
     
+    def augment_dataset(self, X, y):
+        """
+            Augment the dataset by duplicating instances and introducing gaussian noise.\n
+            X.shape: [D, ...]  , y: [D, ...] -> [2*D, ...] , [2*D, ...]
+        """
+        X_augmented = np.copy(X)
+        X_augmented = X_augmented + np.random.normal(0, 0.1, size=X_augmented.shape)
+        X = np.concatenate((X, X_augmented))
+        y = np.concatenate((y, np.copy(y)))
+        tmp = np.c_[X.reshape(len(X), -1), y.reshape(len(y), -1)]
+        np.random.shuffle(tmp)
+        return tmp[:, :X.size//len(X)].reshape(X.shape), \
+            tmp[:, X.size//len(X):].reshape(y.shape)
+
     @property
     def mean(self):
       return self._mean
@@ -66,25 +89,38 @@ class Preprocessor():
 
     @property
     def train(self):
-        return self.make_dataset(self._train)
+        self._last_train = self.make_dataset(self._train)
+        return self._last_train
     
+    @property
+    def augmented_train(self):
+        self._last_train = self.augment_dataset(*self.train)
+        return self._last_train
+
     @property
     def dev(self):
         if self._dev is None:
             return None
-        return self.make_dataset(self._dev)
+        else:
+            self._last_dev = self.make_dataset(self._dev)
+            return self._last_dev
     
     @property
     def test(self):
         if self._test is None:
             return None
-        return self.make_dataset(self._test)
+        else:
+            self._last_test = self.make_dataset(self._test)
+            return self._last_test
+    
+    @property
+    def last_train(self):
+        return getattr(self, '_last_train', None)
 
     @property
-    def example(self):
-        result = getattr(self, '_example', None)
-        if result is None:
-            X, y = self.train
-            result = (X[0], y[0])
-            self._example = result
-        return result
+    def last_dev(self):
+        return getattr(self, '_last_dev', None)
+    
+    @property
+    def last_test(self):
+        return getattr(self, '_last_test', None)

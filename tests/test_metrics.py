@@ -10,7 +10,7 @@ def test_naive_model():
     
     preproc = preprocessing.Preprocessor(train=train, test=test, input_width=window_size)
 
-    naive = metrics.NaiveRegressor()
+    naive = metrics.NaivePredictor()
     naive.compile(loss="mse")
     #naive.fit(*preproc.train)
     X, y = preproc.extract_windows(test)
@@ -26,7 +26,7 @@ def test_naive_metric():
     
     preproc = preprocessing.Preprocessor(train=train, test=test, input_width=window_size)
 
-    naive = metrics.NaiveRegressor()
+    naive = metrics.NaivePredictor()
     naive.compile(loss="mse")
     #naive.fit(*preproc.train)
     X_test, y_test = preproc.test

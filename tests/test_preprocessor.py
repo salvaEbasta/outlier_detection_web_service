@@ -2,6 +2,15 @@ import numpy as np
 
 from ml_microservice.anomaly_detection import preprocessing
 
+def test_split_overlapping_windows():
+    window_size = 5
+    s = np.ones((100), dtype=float)
+    train, dev, test = preprocessing.split(s, dev=True, window_size=window_size)
+    print(train.shape, dev.shape, test.shape)
+    assert train.shape[0] == 70
+    assert dev.shape[0] == 20 + window_size
+    assert test.shape[0] == 10 + window_size
+
 def test_window_building():
     input_width = 3
     label_width = 1

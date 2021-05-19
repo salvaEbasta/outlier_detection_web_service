@@ -1,1 +1,1 @@
-{"status": "active", "created_on": "2021-05-04T16:19:59.464032", "training_time": 0.7916727066040039, "dataset": "jena_T_test.csv", "column": "T (degC)", "regression_performance": 1.6483515501022339}
+{"status": "active", "created_on": "2021-05-17T11:01:02.238220", "training_time": 0.9872958660125732, "dataset": "jena_T_test.csv", "column": "T (degC)", "regression_performance": 2.174999952316284, "epochs": 1}

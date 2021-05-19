@@ -29,11 +29,14 @@ def build_app():
                 return {'available': logic.DetectorsLibrary().list}, 200
 
             elif request.method == 'POST':
+                print("Debug: in controller")
+                print(f"R: {request.get_json()}")
                 return logic.DetectorsLibrary().assemble(request.get_json()), 201
 
             else:
                 return {'error': 'MethodNotAllowed'}, 405
         except Exception as e:
+            print(e)
             return {'error':type(e), 'description':e.__str__()}, 500
 
     @app.route('/api/series/<label>/<version>', methods=['GET', 'POST', 'PUT'])
@@ -45,10 +48,11 @@ def build_app():
                 return anomaly_controller.info, 200
 
             elif request.method == 'POST':
+                print("Debug: in controller")
                 payload = request.get_json()
                 if 'data' not in payload:
                     raise ValueError('The payload is missing field \'data\'')
-                elif anomaly_controller.detector_ready():
+                elif not anomaly_controller.detector_ready:
                     return {'error':'NotAcceptable', 'description':'The model selected is currently under training'}, 406
                 else:
                     if 'epochs' in payload and payload['epochs'] > 0:
@@ -57,9 +61,18 @@ def build_app():
                         return anomaly_controller.predict(payload['data']), 200
             
             elif request.method == 'PUT':
+                print("Debug: in controller")
                 payload = request.get_json()
-                return anomaly_controller.update(), 200
-            
+                if 'data' not in payload:
+                    raise ValueError('The payload is missing field \'data\'')
+                elif not anomaly_controller.detector_ready:
+                    return {'error':'NotAcceptable', 'description':'The model selected is currently under training'}, 406
+                else:
+                    if 'epochs' in payload and payload['epochs'] > 0:
+                        return anomaly_controller.update(payload['data'], epochs=payload['epochs']), 200
+                    else:
+                        return anomaly_controller.update(payload['data']), 200
+
             else:
                 return {'error': 'MethodNotAllowed'}, 405
         except ValueError as e:
