@@ -1,6 +1,13 @@
+import json
+import os
+import logging
+
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
+
+from ml_microservice import constants
 
 def split(dataframe, dev=True, window_size=0):
     """
@@ -46,21 +53,25 @@ class Preprocessor():
                 tmp[len(tmp) - len(data) + i] = data[i]
             data = tmp
         total_windows = len(data) - self.total_width + 1
-        X = np.zeros((total_windows, self.input_width))
-        y = np.zeros((total_windows, self.label_width))
+        X = np.empty((total_windows, self.input_width))
+        y = np.empty((total_windows, self.label_width))
         for i in range(total_windows):
             X[i] = data[i : i + self.input_width]
             y[i] = data[i + self.input_width : i + self.total_width]
         return X, y
 
+    def standardize(self, data, mean, std):
+        if std > 0:
+            data = (data - mean) / std
+        else:
+            data = (data - mean)
+        return data
+
     def make_dataset(self, data):
         """ D x 1 -> N x in_size x 1, N x label_size x 1 """
         data = np.array(data)
         # Standardization
-        if self._std > 0:
-            data = (data - self._mean) / self._std
-        else:
-            data = (data - self._mean)
+        data = self.standardize(data, self._mean, self._std)
         # Make windows
         X, y = self.extract_windows(data)
         return X, y
@@ -70,10 +81,11 @@ class Preprocessor():
             Augment the dataset by duplicating instances and introducing gaussian noise.\n
             X.shape: [D, ...]  , y: [D, ...] -> [2*D, ...] , [2*D, ...]
         """
-        X_augmented = np.copy(X)
-        X_augmented = X_augmented + np.random.normal(0, 0.1, size=X_augmented.shape)
-        X = np.concatenate((X, X_augmented))
-        y = np.concatenate((y, np.copy(y)))
+        X = np.vstack((X, 
+                       X + np.random.normal(0, 0.1, size=X.shape),
+                       X + np.indices(X.shape).sum(axis=0)%2*np.random.normal(0, 0.1, size=X.shape),
+                       ))
+        y = np.vstack((y, y, y))
         tmp = np.c_[X.reshape(len(X), -1), y.reshape(len(y), -1)]
         np.random.shuffle(tmp)
         return tmp[:, :X.size//len(X)].reshape(X.shape), \
@@ -94,8 +106,8 @@ class Preprocessor():
     
     @property
     def augmented_train(self):
-        self._last_train = self.augment_dataset(*self.train)
-        return self._last_train
+        self._last_augmented_train = self.augment_dataset(*self.train)
+        return self._last_augmented_train
 
     @property
     def dev(self):
@@ -118,9 +130,103 @@ class Preprocessor():
         return getattr(self, '_last_train', None)
 
     @property
+    def last_augmented_train(self):
+        return getattr(self, '_last_agumented_train', None)
+
+    @property
     def last_dev(self):
         return getattr(self, '_last_dev', None)
     
     @property
     def last_test(self):
         return getattr(self, '_last_test', None)
+
+    @property
+    def params(self):
+        return dict(
+            input_width = self.input_width,
+            label_width = self.label_width,
+            mean = self._mean,
+            std = self._std,
+        )
+
+    def load_params(self, path):
+        params = None
+        if not os.path.exists(path):
+            logging.warning("Path {:s} does not exists".format(path))
+        else:
+            with open(path, 'r') as f:
+                params = json.load(f)
+            self.input_width = params['input_width']
+            self.label_width = params['label_width']
+            self.total_width = self.input_width + self.label_width
+
+            self._mean = params['mean']
+            self._std = params['std']
+    
+    def save_params(self, ddir):
+        if not os.path.exists(ddir):
+            os.makedirs(ddir)
+        f = os.path.join(ddir, constants.files.preprocessing_params)
+        with open(f, 'w') as f:
+            json.dump(self.params, f)
+
+
+class SeriesFilter():
+    def __init__(self, 
+                    dframe,
+                    min_datapoints = constants.seriesFilter.min_d_points, 
+                    patience = constants.seriesFilter.patience, 
+                ):
+        """  """
+        self._dframe = dframe
+        self.min_datapoints = min_datapoints
+        self._patience = patience
+
+        self._dropped = pd.DataFrame()
+        self._filtered = pd.DataFrame()
+    
+    def enough_datapoints(self, serie):
+        """ serie: flat serie """
+        return len(serie) >= self.min_datapoints
+    
+    def recent_information_content(self, serie):
+        """ serie: flat serie """
+        return any(serie[-self._patience:] > .0) or any(serie[-self._patience:] < .0)
+    
+    def filter_out(self, dframe):
+        dropped = pd.DataFrame()
+        dframe = pd.DataFrame(dframe)
+        for i, col in enumerate(dframe.columns):
+            if not self.recent_information_content(dframe[col]):
+                dropped[col] = dframe[col]
+                dframe = dframe.drop(col, axis=1)
+        return dframe, dropped
+    
+    @property
+    def dframe(self):
+        self._filtered, self._dropped = self.filter_out(self._dframe)
+        return self._filtered
+    
+    @property
+    def dropped_cols(self):
+        return self._dropped
+
+class Padder():
+    def __init__(self, serie, padding_length):
+        self._serie = np.array(serie)
+        self._pad_length = padding_length
+    
+    def zero_pre_loading(self):
+        return self.pre_loading(np.zeros((self._pad_length,) + self._serie.shape[1:]))
+    
+    def pre_loading(self, as_padding):
+        """ as_padding: np.array """
+        as_padding = np.array(as_padding)
+        if len(as_padding) < self._pad_length:
+            return np.r_[
+                np.zeros((self._pad_length - len(as_padding),) + self._serie.shape[1:]),
+                as_padding,
+                self._serie
+            ]
+        return np.r_[as_padding[-self._pad_length:], self._serie]
