@@ -1,0 +1,1 @@
+{"l": 0.01, "window_size": 26, "k": 3.0, "variance": 2.5052053908842473, "mean": 3.0102107390672384, "forecasting_model": "test", "best_epoch": 1, "best_hyperparams": {"learning_rate": 0.05, "tuner/epochs": 2, "tuner/initial_epoch": 0, "tuner/bracket": 2, "tuner/round": 0}}

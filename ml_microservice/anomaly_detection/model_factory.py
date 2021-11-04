@@ -39,7 +39,7 @@ class HyperTest(HyperModel):
 class HyperLinear(HyperModel):
     def __init__(self):
         super().__init__('linear')
-        self.lr = [1e-1, 5e-2, 1e-2]
+        self.lr = [5e-2, 1e-2]
 
     def build(self, window_size):
         def builder(hp):
@@ -69,7 +69,7 @@ class HyperGru(HyperModel):
         self.gru1_drop = (0.2, 0.6)
         self.gru1_rec_drop = (0.2, 0.6)
         
-        self.lr = [1e-1, 5e-2, 1e-2]
+        self.lr = [5e-2, 1e-2]
 
     def build(self, window_size):
         def builder(hp):
@@ -122,7 +122,7 @@ class HyperLstm(HyperModel):
         self.lstm1_drop = (0.2, 0.6)
         self.lstm1_rec_drop = (0.2, 0.6)
         
-        self.lr = [1e-1, 5e-2, 1e-2]
+        self.lr = [5e-2, 1e-2]
 
     def build(self, window_size):
         def builder(hp):
@@ -170,7 +170,7 @@ class HyperCNN(HyperModel):
         self.dense = (8, 8, 32)
         self.dropout = (0.2, 0.6)
 
-        self.lr = [1e-1, 5e-2, 1e-2]
+        self.lr = [5e-2, 1e-2]
 
     def build(self, window_size):
         def builder(hp):
@@ -228,7 +228,7 @@ class HyperHybrid(HyperModel):
         self.gru = (16, 16, 128)
         self.gru_drop = (0.2, 0.6)
 
-        self.lr = [1e-1, 5e-2, 1e-2]
+        self.lr = [5e-2, 1e-2]
 
     def build(self, window_size):
         def builder(hp):
