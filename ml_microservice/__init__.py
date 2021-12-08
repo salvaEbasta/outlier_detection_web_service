@@ -1,95 +1,107 @@
 import os
 from importlib import reload
-from configparser import ConfigParser
+import logging
 
 from flask import Flask
 from flask import redirect, url_for, Response
 from flask import request
+from flask import json
+from werkzeug.exceptions import HTTPException
 
+from . import controllers
 from . import service_logic as logic
 from .anomaly_detection import model_factory
-from . import strings
-
-conf = ConfigParser()
-conf.read(strings.config_file)
+from . import constants
 
 
 def build_app():
+    logging.basicConfig(filename=os.path.join(constants.log.path, 'microservice.log'))
+    
     app = Flask(__name__)
 
     @app.route('/')
     def index():
-        return redirect(url_for('series'))
+        return redirect(url_for('anomaly_detectors'))
 
-    @app.route('/api/series', methods=['GET', 'POST'])
-    def series():
-        reload(logic)
-        try:
-            if request.method == 'GET':
-                return {'available': logic.DetectorsLibrary().list}, 200
+    # AnomalyDetectors
+    @app.route('/api/anomaly_detectors', methods=['GET', 'POST'])
+    def anomaly_detectors():
+        reload(controllers)
+        logging.info('In Anomaly Detector')
+        if request.method == 'GET':
+            return controllers.ListDetectors().handle()
+        elif request.method == 'POST':
+            logging.info(f"Anomaly detectors: {request}")
+            return controllers.NewDetector(request=request).handle()
 
-            elif request.method == 'POST':
-                print("Debug: in controller")
-                print(f"R: {request.get_json()}")
-                return logic.DetectorsLibrary().assemble(request.get_json()), 201
+    @app.route('/api/anomaly_detectors/<label>/<version>', methods=['GET', 'POST'])
+    def detector(label, version):
+        logging.info('detector: {:s}.{:s}[{:s}]'.format(label, version, request.method))
+        reload(controllers)
+        if request.method == 'GET':
+            return controllers.ShowDetector(label, version).handle()
+        elif request.method == 'POST':
+            return controllers.Detect(
+                identifier = label, 
+                version = version, 
+                request = request
+            ).handle()
+    
+    @app.route('/api/anomaly_detectors/<label>/<version>/history')
+    def detectors_history(label, version):
+        logging.info('detector history: {:s}.{:s}'.format(label, version))
+        reload(controllers)
+        return controllers.ShowDetectorHistory(label, version).handle()
+    
+    @app.route('/api/anomaly_detectors/<label>/<version>/parameters')
+    def detectors_params(label, version):
+        logging.info('detector params: {:s}.{:s}'.format(label, version))
+        reload(controllers)
+        return controllers.ShowDetectorParameters(label, version).handle()
 
-            else:
-                return {'error': 'MethodNotAllowed'}, 405
-        except Exception as e:
-            print(e)
-            return {'error':type(e), 'description':e.__str__()}, 500
+    # Xml
+    @app.route('/api/conversion/xml', methods=['POST'])
+    def dump_xml():
+        logging.info('Convert xml')
+        reload(controllers)
+        return controllers.ConvertXML(request=request).handle()
 
-    @app.route('/api/series/<label>/<version>', methods=['GET', 'POST', 'PUT'])
-    def anomaly_detection(label, version):
-        reload(logic)
-        try:
-            anomaly_controller = logic.AnomalyDetection(label=label, version=version)
-            if request.method == 'GET':
-                return anomaly_controller.info, 200
+    # TimeSeriesForecasting
+    @app.route('/api/time_series_forecasting/models')
+    def forecasting_models():
+        logging.info('tsf/models')
+        reload(controllers)
+        return controllers.ListForecasters().handle()
 
-            elif request.method == 'POST':
-                print("Debug: in controller")
-                payload = request.get_json()
-                if 'data' not in payload:
-                    raise ValueError('The payload is missing field \'data\'')
-                elif not anomaly_controller.detector_ready:
-                    return {'error':'NotAcceptable', 'description':'The model selected is currently under training'}, 406
-                else:
-                    if 'epochs' in payload and payload['epochs'] > 0:
-                        return anomaly_controller.predict(payload['data'], epochs=payload['epochs']), 200
-                    else:
-                        return anomaly_controller.predict(payload['data']), 200
-            
-            elif request.method == 'PUT':
-                print("Debug: in controller")
-                payload = request.get_json()
-                if 'data' not in payload:
-                    raise ValueError('The payload is missing field \'data\'')
-                elif not anomaly_controller.detector_ready:
-                    return {'error':'NotAcceptable', 'description':'The model selected is currently under training'}, 406
-                else:
-                    if 'epochs' in payload and payload['epochs'] > 0:
-                        return anomaly_controller.update(payload['data'], epochs=payload['epochs']), 200
-                    else:
-                        return anomaly_controller.update(payload['data']), 200
-
-            else:
-                return {'error': 'MethodNotAllowed'}, 405
-        except ValueError as e:
-            print(e)
-            return {'error':'BadRequest', 'description': str(e)}, 400
-        except Exception as e:
-            print(e)
-            return {'error': '{}'.format(type(e)), 'description': str(e)}, 500
-
+    # Datasets
     @app.route('/api/datasets/local')
     def local_datasets():
-        reload(logic)
-        return {'available': logic.DatasetsLibrary().datasets}
+        logging.info('datasets local')
+        reload(controllers)
+        return controllers.ListDatasets().handle()
 
-    @app.route('/api/regressors')
-    def anomaly_detector_regressors():
-        reload(model_factory)
-        return {'available': model_factory.RegressorFactory().available()}, 200
-    
+    @app.route('/api/datasets/local/<label>/<dataset>')
+    def dataset_exploration(label, dataset):
+        logging.info('explore dataset: {:s}.{:s}'.format(label, dataset))
+        reload(controllers)
+        return controllers.ExploreDataset(label=label, dataset=dataset).handle()
+
+    @app.route('/api/datasets/local/<label>/<dataset>/<column>')
+    def column_exploration(label, dataset, column):
+        logging.info('explore column: {:s}.{:s}.{:s}'.format(label, dataset, column))
+        reload(controllers)
+        return controllers.ExploreColumn(label=label, dataset=dataset, column=column).handle()
+
+    # Generic HTTP error handling
+    @app.errorhandler(HTTPException)
+    def error_handler(e):
+        response = e.get_response()
+        response.data = json.dumps({
+            "code": e.code,
+            "name": e.name,
+            "description": e.description,
+        })
+        response.content_type = "application/json"
+        return response
+
     return app

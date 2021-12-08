@@ -38,7 +38,6 @@ def test_window_building():
 def test_window_building_small_input():
     input_width = 3
     label_width = 1
-    total_width = input_width + label_width
     train = [1]
     preproc = preprocessing.Preprocessor(
         train, 
@@ -67,3 +66,28 @@ def test_make_dataset():
     print(X, y)
     assert X.shape[0] == y.shape[0] == len(train) - total_width + 1
     assert X.shape[1] == input_width
+
+def test_padding():
+    s = np.array([1,1,1,1,1,1])
+    pad_length = 5
+    p = preprocessing.Padder(
+        serie = s,
+        padding_length = pad_length,
+    )
+    padded = p.zero_pre_loading()
+    assert len(padded.shape) == len(s.shape) == 1
+    assert padded.shape[0] == s.shape[0] + pad_length
+
+def test_pre_padding_from_serie():
+    s = np.array([1,1,1,1,1,1])
+    pad_length = 5
+    p = preprocessing.Padder(
+        serie = s,
+        padding_length = pad_length,
+    )
+    padded = p.pre_loading(np.array([2,2]))
+    assert len(padded.shape) == len(s.shape) == 1
+    assert padded.shape[0] == s.shape[0] + pad_length
+    r = [.0,.0,.0,2.0,2.0,1.0,1.0,1.0,1.0,1.0,1.0]
+    for i, v in enumerate(r):
+        assert padded[i] == v
