@@ -21,12 +21,12 @@ def split(dataframe, dev=True, window_size=0):
     
     n = len(dataframe)
     if dev:
-        return dataframe[:int(n*.7)], \
-            dataframe[int(n*.7) - window_size:int(n*.9)], \
-            dataframe[int(n*.9) - window_size:]
+        return dataframe[:int(n*.5)], \
+            dataframe[int(n*.5) - window_size:int(n*.7)], \
+            dataframe[int(n*.7) - window_size:]
     else:
-        return dataframe[:int(n*.9)], \
-            dataframe[int(n*.9) - window_size:]
+        return dataframe[:int(n*.7)], \
+            dataframe[int(n*.7) - window_size:]
 
 class Preprocessor():
     """Class to preprocess datasets that contains a sequence.
