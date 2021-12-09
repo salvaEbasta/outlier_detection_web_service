@@ -1,19 +1,17 @@
 import os
 import json
 import datetime
-from typing import Tuple, Dict
+from typing import Tuple, DictK
 import time
 import logging
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 from tensorflow import keras
 import kerastuner as kt
 
-from ml_microservice import constants
-from ml_microservice.anomaly_detection import model_factory
-from ml_microservice.anomaly_detection import metrics
+import model_factory
+import metrics
 
 class Detector():
     def __init__(self, window_size=50, l=0.01, k=2, forecasting_model="linear", path=None):
@@ -170,7 +168,7 @@ class Detector():
     def predict(self, X):
         return self._best_forecaster.predict(X)
 
-    def save(self, ddir):
+    def save(self, ddir, param_file = "params.json"):
         if not os.path.exists(ddir):
             os.makedirs(ddir)
         if self._best_forecaster is not None:
@@ -178,13 +176,13 @@ class Detector():
         
         self._detection_history.save(ddir)
 
-        param_file = os.path.join(ddir, constants.files.detector_params)
+        param_file = os.path.join(ddir, param_file)
         with open(param_file, 'w') as f:
             json.dump(self.params, f)
         
 
-    def _load(self, env):
-        with open(os.path.join(env, constants.files.detector_params), 'r') as f:
+    def _load(self, env, param_file = 'params.json', history_file = 'history.csv'):
+        with open(os.path.join(env, 'params.json'), 'r') as f:
             params = json.load(f)
         self._window_size = int(params['window_size'])
         self._lambda = float(params['l'])
@@ -200,7 +198,8 @@ class Detector():
         self._best_params = params['best_hyperparams']
 
         self._detection_history = History()
-        self._detection_history.load(os.path.join(env, constants.files.detector_history))
+        self._detection_history.load(os.path.join(env, 'history.csv'))
+
 
 class History():
     def __init__(self):
@@ -267,8 +266,8 @@ class History():
         else:
             return np.array([])
 
-    def save(self, ddir):
-        f = os.path.join(ddir, constants.files.detector_history)
+    def save(self, ddir, history_file = "history.csv"):
+        f = os.path.join(ddir, history_file)
         if os.path.exists(f):
             os.remove(f)
         self._h.to_csv(f)
