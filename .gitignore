@@ -4,8 +4,8 @@
 # logs
 
 # Visual Studio Code
-*.code-workspace/
-.vscode/
+**.code-workspace
+*vscode/
 
 # Byte-compiled / optimized / DLL files
 *__pycache__/
