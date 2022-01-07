@@ -1,7 +1,7 @@
 import os
 import json
 import datetime
-from typing import Tuple, DictK
+from typing import Tuple, Dict
 import time
 import logging
 

@@ -77,3 +77,20 @@ class Prova():
 p = Prova()
 p.write('Prova prova')
 # %%
+import os
+import pandas as pd
+
+df = pd.DataFrame({'p1': [1,2,], 'p2': [3,4]})
+tmp = pd.DataFrame(df)
+for idx, row in df.iterrows():
+    print(f"{idx}: {row.to_dict()}")
+    tmp = tmp.append(row, ignore_index=True)
+tmp.iloc[-1]['p1']
+
+d1 = "2014-01-02"
+d1 = pd.to_datetime(d1)
+d2 = "2014-01-04"
+d2 = pd.to_datetime(d2)
+d1.year == d2.year and d1.month == d2.month and d1.day == d2.day
+
+# %%

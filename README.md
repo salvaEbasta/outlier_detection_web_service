@@ -1,2 +1,8 @@
-# tesi_magistrale
-Repo per la tesi magistrale
+# Machine Learning Microservice for anomaly detection in timeseries
+Dependencies: pip install -r env.txt
+Launch service: python main.py
+Demo: python long_demo.py
+
+Configuration: config.ini
+
+Compose timeseries from .zip archive(XMLs): python compose_timeseries.py zipPath
