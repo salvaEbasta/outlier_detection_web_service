@@ -6,12 +6,12 @@ import xml.etree.ElementTree as ElementTree
 import numpy as np
 import pandas as pd
 
-from ml_microservice import constants
+from ml_microservice import configuration
 
-IGNORES = constants.xml.ignore
-IDS = constants.xml.ids
-UNNAMED = constants.xml.empty_field_name
-DATE_COL = constants.timeseries.date_column
+IGNORES = configuration.xml.ignore
+IDS = configuration.xml.ids
+UNNAMED = configuration.xml.empty_field_name
+DATE_COL = configuration.timeseries.date_column
 
 logger = logging.getLogger("xml2csv")
 logger.setLevel(logging.INFO)

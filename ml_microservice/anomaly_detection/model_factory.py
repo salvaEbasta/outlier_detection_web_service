@@ -3,7 +3,7 @@ from typing import List, Dict
 import tensorflow as tf
 from tensorflow import keras
 
-from ml_microservice import constants
+from ml_microservice import configuration
 
 class HyperModel():
     def __init__(self, builder_id):
@@ -274,7 +274,7 @@ class HyperHybrid(HyperModel):
         return tmp
 
 class ForecasterFactory:
-    def __init__(self, input_size=constants.detectorDefaults.win_size):
+    def __init__(self, input_size=configuration.detectorDefaults.win_size):
         self._input_size = input_size
 
         self.factory = dict()

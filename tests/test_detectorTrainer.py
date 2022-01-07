@@ -7,7 +7,7 @@ import pytest
 
 import numpy as np
 
-from ml_microservice import constants as c
+from ml_microservice import configuration as c
 from ml_microservice.anomaly_detection import preprocessing
 from ml_microservice.service_logic import DetectorTrainer
 from ml_microservice.service_logic import TimeseriesLibrary
@@ -85,15 +85,16 @@ def test_train():
 def test_prediction():
     # Init dataset
     samples = 1000
+    tsID = 'T (degC)'
 
     dl = TimeseriesLibrary()
-    data, column = dl.fetch_ts('jena', 'temperature')
+    data = dl.fetch_ts('jena', 'temperature', tsID)
 
     # Init detector
     mid = 'test_prediction'
     training = dict(label='jena', dataset='temperature', column='T (degC)')
     forecaster = 'test'
-    assert column == training['column']
+    assert tsID == training['column']
 
     _detector_init(mid, training, forecaster)
     dt = DetectorTrainer()

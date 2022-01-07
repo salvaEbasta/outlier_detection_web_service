@@ -5,7 +5,7 @@ import shutil
 
 import numpy as np
 
-from ml_microservice import constants as c
+from ml_microservice import configuration as c
 from ml_microservice.anomaly_detection import preprocessing
 from ml_microservice.anomaly_detection import detector
 

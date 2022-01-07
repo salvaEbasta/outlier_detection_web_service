@@ -3,19 +3,17 @@ from importlib import reload
 import logging
 
 from flask import Flask
-from flask import redirect, url_for, Response
+from flask import redirect, url_for
 from flask import request
 from flask import json
 from werkzeug.exceptions import HTTPException
 
 from . import controllers
-from . import service_logic as logic
-from .anomaly_detection import model_factory
-from . import constants
+from . import configuration as cfg
 
 
 def build_app():
-    logging.basicConfig(filename=os.path.join(constants.log.path, 'microservice.log'))
+    logging.basicConfig(filename = os.path.join(cfg.log.path, 'microservice.log'))
     
     app = Flask(__name__)
 

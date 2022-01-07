@@ -4,7 +4,7 @@ import shutil
 
 import pandas as pd
 
-from ml_microservice import constants as c
+from ml_microservice import configuration as c
 from ml_microservice import service_logic
 from ml_microservice.conversion import Xml2Csv
 from tests import TEST_DIR

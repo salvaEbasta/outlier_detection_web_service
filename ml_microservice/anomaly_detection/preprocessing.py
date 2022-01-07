@@ -7,7 +7,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 
-from ml_microservice import constants
+from ml_microservice import configuration
 
 def split(dataframe, dev=True, window_size=0):
     """
@@ -27,6 +27,31 @@ def split(dataframe, dev=True, window_size=0):
     else:
         return dataframe[:int(n*.7)], \
             dataframe[int(n*.7) - window_size:]
+
+class TSPreprocessor():
+    def __init__(self, 
+        ts: pd.DataFrame,
+        value_col = configuration.timeseries.value_col,
+        date_col = configuration.timeseries.date_column
+    ):
+        self._valC = value_col
+        self._dateC = date_col
+        self.ts = ts
+    
+    def fill_nan(self, ts):
+        nan_num = ts[self._valC].isnull().sum()
+        if nan_num / len(ts) <= 0.15:
+            ts[self._valC] = ts[self._valC].interpolate(
+                method = "polynomial", 
+                order = 4
+            ).fillna("bfill")
+        else:
+            ts[self._valC] = ts[self._valC].fillna(0.0)
+        return ts
+
+    def extract_windows(self, ts, w):
+        pass
+
 
 class Preprocessor():
     """Class to preprocess datasets that contains a sequence.
@@ -167,7 +192,7 @@ class Preprocessor():
     def save_params(self, ddir):
         if not os.path.exists(ddir):
             os.makedirs(ddir)
-        f = os.path.join(ddir, constants.files.preprocessing_params)
+        f = os.path.join(ddir, configuration.files.preprocessing_params)
         with open(f, 'w') as f:
             json.dump(self.params, f)
 
@@ -175,8 +200,8 @@ class Preprocessor():
 class SeriesFilter():
     def __init__(self, 
                     dframe,
-                    min_datapoints = constants.seriesFilter.min_d_points, 
-                    patience = constants.seriesFilter.patience, 
+                    min_datapoints = configuration.seriesFilter.min_d_points, 
+                    patience = configuration.seriesFilter.patience, 
                 ):
         """  """
         self._dframe = dframe

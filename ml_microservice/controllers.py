@@ -1,13 +1,11 @@
 from importlib import reload
 import os
-import re
 from typing import List
-import json
 import logging
 
-import numpy as np
-
-from ml_microservice import constants
+from ml_microservice import configuration as cfg
+from ml_microservice.logic.summary import Summary
+from ml_microservice.logic.timeseries_lib import TimeseriesLibrary
 from ml_microservice import service_logic as logic
 from ml_microservice.conversion import Xml2Csv
 from ml_microservice.anomaly_detection import model_factory, detector
@@ -15,7 +13,7 @@ from ml_microservice.anomaly_detection import model_factory, detector
 class Controller():
     def __init__(self, lvl = logging.DEBUG):
         reload(logic)
-        reload(constants)
+        reload(cfg)
         reload(detector)
         log_id = str(self.__class__.__name__).lower()
         self.logger = logging.getLogger(log_id)
@@ -77,7 +75,7 @@ class ConvertXML(Controller):
             dfs = x2c.parse(self.xml)
             self.logger.debug("Parsings: {}".format(dfs))
             if self.store:
-                ts_lib = logic.TimeseriesLibrary()
+                ts_lib = TimeseriesLibrary()
                 for dfID, df in dfs.items():
                     ts_lib.save(self.group, dfID, df, self.override)
             return {
@@ -99,7 +97,7 @@ class ListDatasets(Controller):
     def _handle(self, *args, **kwargs):
         return {
             'code': 200,
-            'available': logic.TimeseriesLibrary().timeseries,
+            'available': TimeseriesLibrary().timeseries,
         }, 200
 
 class ExploreDataset(Controller):
@@ -109,7 +107,7 @@ class ExploreDataset(Controller):
         self.dimension = dimension
 
     def _handle(self, *args, **kwargs):
-        dset_lib = logic.TimeseriesLibrary()
+        dset_lib = TimeseriesLibrary()
         if not dset_lib.has_group(self.group):
             return {
                 'code': 404,
@@ -140,7 +138,7 @@ class ExploreColumn(Controller):
         self.tsID = tsID
 
     def _handle(self, *args, **kwargs):
-        ts_lib = logic.TimeseriesLibrary()
+        ts_lib = TimeseriesLibrary()
         if not ts_lib.has_group(self.group):
             return {
                 'code': 404,
@@ -278,8 +276,8 @@ class ShowDetector(Controller):
     def _handle(self, *args, **kwargs):
         try:
             env = logic.DetectorTrainer().retrieve_env(self.label, self.version)
-            summ = logic.Summary()
-            summ.load(os.path.join(env, constants.files.detector_summary))
+            summ = Summary()
+            summ.load(os.path.join(env, cfg.files.detector_summary))
             return {
                 'code': 200,
                 'summary': summ.values,
@@ -300,7 +298,7 @@ class ShowDetectorHistory(Controller):
         try:
             env = logic.DetectorTrainer().retrieve_env(self.label, self.version)
             history = detector.History()
-            history.load(os.path.join(env, constants.files.detector_history))
+            history.load(os.path.join(env, cfg.files.detector_history))
             return {
                 'code': 200,
                 'history': history.values,
