@@ -79,7 +79,29 @@ p.write('Prova prova')
 # %%
 import os
 import pandas as pd
+import numpy as np
 
-df = pd.DataFrame({'p1': [1,2,], 'p2': [3,4]})
-df
+df = pd.DataFrame({'p1': [np.nan,2, np.nan], 'p2': [3, np.nan ,4]})
+df["p1"] = df["p1"].fillna(method="ffill").fillna(method="bfill")
+df["p2"] = df["p2"].fillna(.0)
+X = df.to_numpy()
+print(X)
+print(np.transpose(X))
+np.unique(np.geomspace(2, len(df), num = len(df), dtype=int))
+# %%
+import numpy as np
+X = np.random.uniform(size=[4,3])
+print(X)
+centers = np.ones(shape=[2,3])
+for i, v in enumerate(centers):
+    print(X - v)
+    print(np.linalg.norm(X - v, axis=1))
+    print(np.argmin(np.linalg.norm(X - v, axis=1)))
+    print(X[np.argmin(np.linalg.norm(X - v, axis=1))])
+
+# %%
+import numpy as np
+lbls = np.array([0, 0, 0, 1, 1, 1, 2], dtype=int)
+np.sum(lbls == 2)
+
 # %%
