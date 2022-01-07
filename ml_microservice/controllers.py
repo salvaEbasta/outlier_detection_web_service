@@ -6,15 +6,12 @@ import logging
 from ml_microservice import configuration as cfg
 from ml_microservice.logic.summary import Summary
 from ml_microservice.logic.timeseries_lib import TimeseriesLibrary
-from ml_microservice import service_logic as logic
+from ml_microservice.logic.detector_trainer import DetectorTrainer
 from ml_microservice.conversion import Xml2Csv
 from ml_microservice.anomaly_detection import model_factory, detector
 
 class Controller():
     def __init__(self, lvl = logging.DEBUG):
-        reload(logic)
-        reload(cfg)
-        reload(detector)
         log_id = str(self.__class__.__name__).lower()
         self.logger = logging.getLogger(log_id)
         self.logger.setLevel(lvl)
@@ -187,7 +184,7 @@ class ListDetectors(Controller):
         super().__init__()
 
     def _handle(self, *args, **kwargs):
-        tmp = logic.DetectorTrainer().detectors_list
+        tmp = DetectorTrainer().detectors_list
         return {
             'code': 200,
             'detectors': tmp,
@@ -252,7 +249,7 @@ class NewDetector(Controller):
         try:
             self._unpack(self.payload)
             self.logger.debug("done unpacking")
-            out = logic.DetectorTrainer().train(
+            out = DetectorTrainer().train(
                                                 label=self.identifier, 
                                                 training = self.training,
                                                 forecasting_model=self.forecasting, 
@@ -275,7 +272,7 @@ class ShowDetector(Controller):
 
     def _handle(self, *args, **kwargs):
         try:
-            env = logic.DetectorTrainer().retrieve_env(self.label, self.version)
+            env = DetectorTrainer().retrieve_env(self.label, self.version)
             summ = Summary()
             summ.load(os.path.join(env, cfg.files.detector_summary))
             return {
@@ -296,7 +293,7 @@ class ShowDetectorHistory(Controller):
 
     def _handle(self, *args, **kwargs):
         try:
-            env = logic.DetectorTrainer().retrieve_env(self.label, self.version)
+            env = DetectorTrainer().retrieve_env(self.label, self.version)
             history = detector.History()
             history.load(os.path.join(env, cfg.files.detector_history))
             return {
@@ -317,7 +314,7 @@ class ShowDetectorParameters(Controller):
     
     def _handle(self, *args, **kwargs):
         try:
-            dt = logic.DetectorTrainer()
+            dt = DetectorTrainer()
             dt.load_detector(self.label, self.version)
             params = {}
             if dt.loaded:
@@ -380,7 +377,7 @@ class Detect(Controller):
         try:
             self.logger.debug("Start _handle")
             self._unpack(self.payload)
-            trainer = logic.DetectorTrainer()
+            trainer = DetectorTrainer()
             trainer.load_detector(self.identifier, self.version)
             self.logger.debug("Trainer ended loading model")
             if not trainer.loaded:

@@ -13,7 +13,11 @@ from . import configuration as cfg
 
 
 def build_app():
-    logging.basicConfig(filename = os.path.join(cfg.log.path, 'microservice.log'))
+    log_file = os.path.join(cfg.log.path, 'microservice.log')
+    if not os.path.exists(log_file):
+        os.makedirs(os.path.split(log_file)[0])
+    
+    logging.basicConfig(filename = log_file)
     
     app = Flask(__name__)
 

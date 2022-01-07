@@ -1,7 +1,8 @@
+from argparse import Namespace
 import os
 
 # Files ------------------------------------------
-files = dict(
+files = Namespace(
     detector_summary = 'summary.json',
     detector_params = 'params.json',
     detector_history = 'history.csv',
@@ -9,19 +10,19 @@ files = dict(
 )
 
 # Formats -------------------------------------------
-formats = dict(
+formats = Namespace(
     version = 'v%d',
     identifier_separator = '_',
 )
 
 # Logs ------------------------------------------------
-log = dict(
+log = Namespace(
     path = os.path.join("data", "log"),
 )
 log.controllers = os.path.join(log.path, 'controllers')
 
 # XML ------------------------------------------------
-xml = dict(
+xml = Namespace(
     path = os.path.join("data", "xml"),
     empty_field_name = "not_specified",
     ids = ["giorno_settimana", ".*_cd", ".*_CD", "Abc_articolo"],
@@ -29,7 +30,7 @@ xml = dict(
 )
 
 # Detector defaults -------------------------------------
-detectorDefaults = dict(
+detectorDefaults = Namespace(
     max_epochs = 10,
     win_size = 26,
     early_stopping_patience = 3,
@@ -38,20 +39,20 @@ detectorDefaults = dict(
 )
 
 # Trainer defaults ----------------------------------------
-detectorTrainer = dict(
+detectorTrainer = Namespace(
     path = os.path.join("data", "saved"),
     retrain_patience = 5,
 )
 
 # Timeseries ----------------------------------------------
-timeseries = dict(
+timeseries = Namespace(
     path = os.path.join("data", "timeseries"),
     date_column = "Date",
     value_column = "Value",
 )
 
 # Filter --------------------------------------------------
-seriesFilter = dict(
+seriesFilter = Namespace(
     min_d_points = 30,
     patience = 10,
 )

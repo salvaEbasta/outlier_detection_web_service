@@ -10,8 +10,8 @@ import pandas as pd
 from tensorflow import keras
 import kerastuner as kt
 
-import model_factory
-import metrics
+from . import model_factory
+from . import metrics
 
 class Detector():
     def __init__(self, window_size=50, l=0.01, k=2, forecasting_model="linear", path=None):

@@ -4,10 +4,8 @@ import logging
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-from tensorflow import keras
 
-from ml_microservice import configuration
+from ml_microservice import configuration as cfg
 
 def split(dataframe, dev=True, window_size=0):
     """
@@ -31,8 +29,8 @@ def split(dataframe, dev=True, window_size=0):
 class TSPreprocessor():
     def __init__(self, 
         ts: pd.DataFrame,
-        value_col = configuration.timeseries.value_col,
-        date_col = configuration.timeseries.date_column
+        value_col = cfg.timeseries.value_column,
+        date_col = cfg.timeseries.date_column
     ):
         self._valC = value_col
         self._dateC = date_col
@@ -192,7 +190,7 @@ class Preprocessor():
     def save_params(self, ddir):
         if not os.path.exists(ddir):
             os.makedirs(ddir)
-        f = os.path.join(ddir, configuration.files.preprocessing_params)
+        f = os.path.join(ddir, cfg.files.preprocessing_params)
         with open(f, 'w') as f:
             json.dump(self.params, f)
 
@@ -200,8 +198,8 @@ class Preprocessor():
 class SeriesFilter():
     def __init__(self, 
                     dframe,
-                    min_datapoints = configuration.seriesFilter.min_d_points, 
-                    patience = configuration.seriesFilter.patience, 
+                    min_datapoints = cfg.seriesFilter.min_d_points, 
+                    patience = cfg.seriesFilter.patience, 
                 ):
         """  """
         self._dframe = dframe
