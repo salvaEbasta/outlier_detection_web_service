@@ -10,7 +10,7 @@ import numpy as np
 from ml_microservice import constants as c
 from ml_microservice.anomaly_detection import preprocessing
 from ml_microservice.service_logic import DetectorTrainer
-from ml_microservice.service_logic import DatasetsLibrary
+from ml_microservice.service_logic import TimeseriesLibrary
 
 def _detector_init(mid, training, forecasting):
     dl = DetectorTrainer()
@@ -86,8 +86,8 @@ def test_prediction():
     # Init dataset
     samples = 1000
 
-    dl = DatasetsLibrary()
-    data, column = dl.fetch_column('jena', 'temperature')
+    dl = TimeseriesLibrary()
+    data, column = dl.fetch_ts('jena', 'temperature')
 
     # Init detector
     mid = 'test_prediction'

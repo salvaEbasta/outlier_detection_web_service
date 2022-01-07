@@ -1,5 +1,6 @@
 from importlib import reload
 import os
+import re
 from typing import List
 import json
 import logging
@@ -8,8 +9,8 @@ import numpy as np
 
 from ml_microservice import constants
 from ml_microservice import service_logic as logic
-from ml_microservice.anomaly_detection import model_factory, detector
 from ml_microservice.conversion import Xml2Csv
+from ml_microservice.anomaly_detection import model_factory, detector
 
 class Controller():
     def __init__(self, lvl = logging.DEBUG):
@@ -42,45 +43,47 @@ class ConvertXML(Controller):
 
     def _unpack(self, payload):
         self.logger.info("Unpack: {}".format(payload))
-        self.xml_str, self.label = '', ''
 
         # Mandatory
         if 'xml' not in payload:
-            raise ValueError('The field xml must be specified')
-        elif 'label' not in payload:
-            raise ValueError('The field label must be specified')
-        self.xml_str = payload['xml']
-        self.label = payload['label']
+            raise ValueError('The field \'xml\' must be specified')
+        self.xml = payload['xml']
 
         # Optionals
-        if 'field_name_id' in payload and type(payload['field_name_id']) is not str:
-            raise ValueError('The field field_name_id must be a string')
-        self.field_id = payload.get('field_name_id', None)
+        if 'id_patterns' in payload and type(payload['id_patterns']) is not str:
+            raise ValueError('The field \'id_patterns\' must be a list of strings')
+        self.id_patterns = [payload.get('id_patterns')] if 'id_patterns' in payload else []
         
-        if 'field_name_ignore' in payload and type(payload['field_name_ignore']) is not List[str]:
-            raise ValueError('The field field_name_ignore must be specified a string')
-        self.field_ignore = payload.get('field_name_ignore', None)
+        if 'ignore_list' in payload and type(payload['ignore_list']) is not List[str]:
+            raise ValueError('The field \'ignore_list\' must be a list of strings')
+        self.ignore_list = payload.get('ignore_list', [])
 
         if 'store' in payload and type(payload['store']) is not bool:
-            raise ValueError('The field store must be a boolean')
+            raise ValueError('The field \'store\' must be a boolean')
         self.store = payload.get('store', False)
+        if self.store and 'group' not in payload:
+            raise ValueError('The field \'group\' must be specified if the series is to be stored')
+        self.group = payload.get("group", None)
+        self.override = payload.get("override", False)
+
 
     def _handle(self, *args, **kwargs):
         try:
             self._unpack(self.payload)
-            dl = logic.DatasetsLibrary()
-            parsings = dl.convert(
-                label = self.label,
-                xml = self.xml_str,
-                field_id = self.field_id,
-                field_ignore = self.field_ignore,
-                store = self.store,
+            x2c = Xml2Csv(
+                ignore_list = self.ignore_list,
+                id_patterns = self.id_patterns
             )
-            self.logger.debug("Parsings: {}".format(parsings))
+            dfs = x2c.parse(self.xml)
+            self.logger.debug("Parsings: {}".format(dfs))
+            if self.store:
+                ts_lib = logic.TimeseriesLibrary()
+                for dfID, df in dfs.items():
+                    ts_lib.save(self.group, dfID, df, self.override)
             return {
                 'code': 200,
                 'stored': self.store,
-                'extracted': [{'dimension': name, 'data': data} for name, data in parsings],
+                'extracted': [{'dimension': dfID, 'data': df.to_dict()} for dfID, df in dfs],
             }, 200
         except ValueError as e:
             return {
@@ -96,64 +99,80 @@ class ListDatasets(Controller):
     def _handle(self, *args, **kwargs):
         return {
             'code': 200,
-            'available': logic.DatasetsLibrary().datasets,
+            'available': logic.TimeseriesLibrary().timeseries,
         }, 200
 
 class ExploreDataset(Controller):
-    def __init__(self, label, dataset):
+    def __init__(self, group, dimension):
         super().__init__()
-        self.label = label
-        self.dataset = dataset
+        self.group = group
+        self.dimension = dimension
 
     def _handle(self, *args, **kwargs):
-        dset_lib = logic.DatasetsLibrary()
-        if not dset_lib.has_label(self.label):
+        dset_lib = logic.TimeseriesLibrary()
+        if not dset_lib.has_group(self.group):
             return {
                 'code': 404,
                 'error': 'NotFound',
-                'description': 'Can\'t find label \'{:s}\''.format(self.label),
+                'description': 'Group \'{:s}\' not found'.format(self.group),
             }, 404
-        elif not dset_lib.has(self.label, self.dataset):
+        elif not dset_lib.has(self.group, self.dimension):
             return {
                 'code': 404,
                 'error': 'NotFound',
-                'description': 'Can\'t find the dataset \'{:s}\' under \'{:s}\''.format(self.dataset, self.label),
+                'description': 'Dimension \'{:s}\' not found in group \'{:s}\''.format(self.dimension, self.group),
             }, 404
         else:
-            dframe = dset_lib.fetch(self.label, self.dataset)
+            df = dset_lib.fetch(self.group, self.dimension)
             return {
                 'code': 200,
-                'columns': list(dframe.columns),
-                'shape': list(dframe.values.shape),
+                'group': self.group,
+                'dimension': self.dimension,
+                'columns': list(df.columns),
+                'shape': list(df.values.shape),
             }, 200
 
 class ExploreColumn(Controller):
-    def __init__(self, label, dataset, column):
+    def __init__(self, group, dimension, tsID):
         super().__init__()
-        self.label = label
-        self.dataset = dataset
-        self.column = column
+        self.group = group
+        self.dimension = dimension
+        self.tsID = tsID
 
     def _handle(self, *args, **kwargs):
-        dset_lib = logic.DatasetsLibrary()
-        try:
-            if not dset_lib.has_label(self.label):
-                raise ValueError('Can\'t find label \'{:s}\''.format(self.label))
-            elif not dset_lib.has(self.label, self.dataset):
-                raise ValueError('Can\'t find the dataset \'{:s}\' under \'{:s}\''.format(self.dataset, self.label))
-            else:
-                values, col_name = dset_lib.fetch_column(self.label, self.dataset, self.column)
-                return {
-                    'code': 200,
-                    'column_name': col_name,
-                    'values': np.array(values).tolist(),
-                }, 200
-        except ValueError as e:
+        ts_lib = logic.TimeseriesLibrary()
+        if not ts_lib.has_group(self.group):
             return {
                 'code': 404,
                 'name': 'NotFound',
-                'description': str(e),
+                'description': "Group \'{:s}\' not found".format(self.group),
             }, 404
+        if not ts_lib.has(self.group, self.dimension):
+            return {
+                'code': 404,
+                'name': 'NotFound',
+                'description': "Dimension \'{:s}\' not found in group \'{:s}\'".format(
+                    self.group,
+                    self.dimension
+                ),
+            }, 404
+        df = ts_lib.fetch(self.group, self.dimension)
+        if self.tsID not in df:
+            return {
+                'code': 404,
+                'name': 'NotFound',
+                'description': "Timeseries ID \'{:s}\' not found in \'{:s}-{:s}\'".format(
+                    self.tsID,
+                    self.group,
+                    self.dimension
+                ),
+            }, 404 
+        df = ts_lib.fetch_ts(self.group, self.dimension, self.tsID)
+        return {
+            'code': 200,
+            'tsID': self.tsID,
+            'values': df.to_dict()
+        }, 200
 
 class ListForecasters(Controller):
     def __init__(self):
@@ -370,7 +389,7 @@ class Detect(Controller):
                 return {
                     'code': 409,
                     'name': 'Conflict',
-                    'description': 'The detector @{:s}.{:s} is currently not available'.format(self.identifier, version),
+                    'description': 'The detector @{:s}.{:s} is currently not available'.format(self.identifier, self.version),
                 }, 404
             else:
                 out = trainer.detect(self.data, self.store, self.pre_load)

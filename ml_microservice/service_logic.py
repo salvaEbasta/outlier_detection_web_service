@@ -1,7 +1,7 @@
 import os
 from importlib import reload
 import time
-from datetime import datetime
+from datetime import date, datetime
 from threading import Thread
 from multiprocessing import Process
 import json
@@ -19,7 +19,6 @@ from .anomaly_detection import model_factory
 from .anomaly_detection import preprocessing
 from .anomaly_detection import detector
 from .anomaly_detection import metrics
-from .conversion import Xml2Csv
 
 STATUS = dict(active='active', training='under_training')
 
@@ -74,8 +73,8 @@ class DetectorTrainer():
         # Check and load label, dataset, column
         self.logger.info("[.] Assembling {:s}/{:s}/{}, {:s}".format(label, dataset, column, forecasting_model))
         self.logger.info("[.] Loading dataframe ...")
-        dset_lib = DatasetsLibrary()
-        serie, column = dset_lib.fetch_column(label, dataset, column)
+        dset_lib = TimeseriesLibrary()
+        serie, column = dset_lib.fetch_ts(label, dataset, column)
 
         serie_evaluator = preprocessing.SeriesFilter(None)
         if not serie_evaluator.recent_information_content(serie):
@@ -247,8 +246,8 @@ class DetectorTrainer():
         """
         self.logger.info("[.] Requested detection")
         if pre_load_data is not None:
-            dl = DatasetsLibrary()
-            pre_load_data, _ = dl.fetch_column(
+            dl = TimeseriesLibrary()
+            pre_load_data, _ = dl.fetch_ts(
                 pre_load_data.get('label', self._summary._label),
                 pre_load_data.get('dataset', self._summary._dataset),
                 pre_load_data.get('column', self._summary._column)
@@ -313,97 +312,136 @@ class DetectorTrainer():
             degradation = 'not_evaluated' if not store else str(degradation),
         )
 
-class DatasetsLibrary:
-    def __init__(self, path=constants.datasets.path):
-        self.logger = logging.getLogger('datasetLib')
+class TimeseriesLibrary:
+    def __init__(self, 
+        path=constants.timeseries.path, 
+        date_col=constants.timeseries.date_column
+    ):
+        self.logger = logging.getLogger('tsLib')
         self.logger.setLevel(logging.DEBUG)
         self.storage = path
+        self.date_col = date_col
 
     @property
-    def datasets(self):
+    def timeseries(self):
         """
-            [{label: , datasets: [str, ...]}, ...]
+        -> [{group: str, dimensions: [str, ...]}, ...]
         """
-        result = []
+        groups = []
         for f in os.listdir(self.storage):
-            file = os.path.join(self.storage, f)
-            if os.path.isdir(file):
-                result.append(dict(
-                    datasets=[csv[:-4] for csv in os.listdir(file) \
-                                        if re.match('.*.csv', csv) is not None],
-                    label=f,
-                ))
-        return result
+            abs_f = os.path.join(self.storage, f)
+            if os.path.isdir(abs_f):
+                groups.append({
+                    "group": f,
+                    "dimensions": [
+                        csv[:-4] for csv in os.listdir(abs_f)
+                            if re.match('.*.csv', csv) is not None
+                    ],
+                })
+        return groups
 
-    def fetch(self, label:str, dataset: str):
+    def _2storage_path(self, group :str, dim: str = None):
+        """-> (path: str, exists: bool)"""
+        stg_path = os.path.join(self.storage, group)
+        if dim is None:
+            return stg_path, os.path.exists(stg_path)
+        stg_path = os.path.join(stg_path, "{:s}.csv".format(dim))
+        return stg_path, os.path.exists(stg_path)
+
+    def fetch(self, group :str, dim: str):
         """ -> pandas.DataFrame """
-        self.logger.info("Fetch {}/{}".format(label, dataset))
-        result = None
-        if self.has(label, dataset):
-            result = os.path.join(self.storage, label, dataset + '.csv')
-            result = pd.read_csv(result)
-            if 'Unnamed: 0' in result.columns:
-                result = result.drop('Unnamed: 0', axis=1)
-        return result
+        self.logger.info("Fetch {}/{}".format(group, dim))
+        df = None
+        if self.has(group, dim):
+            df = os.path.join(self.storage, group, "{:s}.csv".format(dim))
+            df = pd.read_csv(df)
+            if 'Unnamed: 0' in df.columns:
+                df = df.drop('Unnamed: 0', axis=1)
+            df[self.date_col] = pd.to_datetime(df[self.date_col])
+        return df
 
-    def fetch_column(self, label: str, dataset: str, column: str = None):
-        """ -> np.array: flat ; column"""
-        self.logger.info("[.] Fetch column: {:s}/{:s}-{}".format(label, dataset, column))
-        if not self.has_label(label):
-            self.logger.warning("[!] {:s} not found".format(label))
-            raise ValueError('The label {:s} couldn\'t be found'.format(label))
-        if not self.has(label, dataset):
-            self.logger.warning("[!] {:s}/{:s} not found".format(label, dataset))
-            raise ValueError('The dataset {:s} is not listed under this {:s}'.format(dataset, label))
-        tmp = self.fetch(label, dataset)
-        if column is None:
-            column = tmp.columns[0]
-            self.logger.info("[.] Selected column: {:s}".format(column))            
-        elif column not in tmp.columns:
-            self.logger.warning("[!] Col {:s} not found in {:s}/{:s}".format(column, label, dataset))
-            raise ValueError('The column {:s} is not part of {:s}/{:s}'.format(column, label, dataset))
-        
-        tmp = tmp[column].values
-        tmp = np.squeeze(tmp)
-        return tmp, column
+    def fetch_ts(self, group: str, dim: str, tsID: str):
+        """ -> pd.DataFrame"""
+        self.logger.info("[.] Fetch ts: {:s}/{:s}-{:s}".format(group, dim, tsID))
+        if not self.has_group(group):
+            self.logger.warning("[!] Group \'{:s}\' not found".format(group))
+            raise ValueError('Group \'{:s}\' not found'.format(group))
+        if not self.has(group, dim):
+            self.logger.warning("[!] Dimension \'{:s}/{:s}\' not found".format(group, dim))
+            raise ValueError('The dimension \'{:s}\' not in group \'{:s}\''.format(dim, group))
+        df = self.fetch(group, dim)
+        if tsID not in df.columns:
+            self.logger.warning("[!] tsID {:s} not in {:s}/{:s}".format(tsID, group, dim))
+            raise ValueError('tsID {:s} not in {:s}/{:s}'.format(tsID, group, dim))
+        df = df[[self.date_col, tsID]]
+        return df, tsID
 
-    def has_label(self, label:str):
-        return label in map(lambda x: x['label'], self.datasets)
+    def has_group(self, group: str):
+        return self._2storage_path(group)[-1]
 
-    def has_dataset(self, dset: str):
-        return any([dset in dataset['datasets'] for dataset in self.datasets])
+    def has_dimension(self, dim: str):
+        for j in self.timeseries:
+            for d in j["dimensions"]:
+                if dim == d:
+                    return True
+        return False
 
-    def has(self, label:str, dset: str):
-        return any([dset in dataset['datasets'] for dataset in self.datasets if dataset['label'] == label])
+    def has(self, group:str, dimension: str):
+        return self._2storage_path(group, dimension)[-1]
 
-    def save(self, label:str, dset_name: str, data: dict, override: bool = False):
+    def remove(self, group: str, dimension: str = None, tsID: str = None):
+        if dimension is None and tsID is not None:
+            logging.warning("[!] Invalid removal, tsID specified when dimension is not")
+            return False
+        df_path, is_real = self._2storage_path(group)
+        if not is_real:
+            return True
+        df_path, is_real = self._2storage_path(group, dimension)
+        if not is_real:
+            return True
+        if tsID is None:
+            os.remove(df_path)
+            return True
+        if tsID == self.date_col:
+            logging.warning("[!] Asked to remove date ts, refused")
+            return False
+        df = pd.read_csv(df_path)
+        if tsID not in df.columns:
+            return True
+        df = df.drop(tsID, axis=1)
+        os.remove(df_path)
+        df.to_csv(df_path, index=False)
+        return True
+
+    def save(self, group: str, dfID: str, df: pd.DataFrame, override: bool = False):
         """ No merging """
-        dest = os.path.join(self.storage, label)
-        if not self.has_label(label):
-            os.makedirs(dest)
-        dest = os.path.join(dest, dset_name + '.csv')
-        if os.path.exists(dest) and override:
-            os.remove(dest)
-        if not os.path.exists(dest):
-            dframe = pd.DataFrame.from_dict(data)
-            if 'Unnamed: 0' in dframe.columns:
-                dframe = dframe.drop('Unnamed: 0', axis=1)
-                dframe.to_csv(dest)
-            else:
-                dframe.to_csv(dest)
+        if 'Unnamed: 0' in df.columns:
+            df = df.drop('Unnamed: 0', axis=1)
 
-    def convert(self, label: str, xml: str, field_id = None, field_ignore = None, store: bool = False):
-        """ -> [(str, dict(str, [float, ...])), ...]"""
-        parser = Xml2Csv()
-        parsings = parser.parse(xml, field_id, field_ignore)
-        if store:
-            for name, data in parsings:
-                if self.has(label, name):
-                    old = self.fetch(label, name)
-                    data = old.append(pd.DataFrame(data), ignore_index=True).fillna(.0)
-                    data = data.to_dict()
-                self.save(label, name, data, override=True)
-        return parsings
+        if not override and self.has(group, dfID):
+            old_df = self.fetch(group, dfID)
+            cols = set()
+            [cols.add(c) for c in old_df.columns]
+            [cols.add(c) for c in df.columns]
+            for c in cols:
+                if c not in old_df:
+                    old_df[c] = [np.nan]*len(old_df)
+                if c not in df:
+                    df[c] = [np.nan]*len(df)
+            for _, row in df.iterrows():
+                last_date = old_df.iloc[-1][self.date_col]
+                if (
+                    last_date.year == row[self.date_col].year and 
+                    last_date.month == row[self.date_col].month and
+                    last_date.day == row[self.date_col].day
+                ):
+                    continue
+                old_df = old_df.append(row, ignore_index=True)
+            df = old_df
+        self.remove(group, dfID)
+        df_path = self._2storage_path(group, dfID)    
+        df.to_csv(df_path, index=False)
+        return True
 
 class Summary():
     def __init__(self, 

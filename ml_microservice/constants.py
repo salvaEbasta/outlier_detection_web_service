@@ -2,7 +2,7 @@ import os
 import configparser
 from argparse import Namespace
 import shlex
-
+# Files ------------------------------------------
 files = Namespace(
     config = 'config.ini',
     detector_summary = 'summary.json',
@@ -11,7 +11,7 @@ files = Namespace(
     preprocessing_params = 'preprocessing.json',
 )
 
-
+# Formats -------------------------------------------
 formats = Namespace(
     version = 'v%d',
     identifier_separator = '_',
@@ -20,11 +20,13 @@ formats = Namespace(
 _conf = configparser.ConfigParser()
 _conf.read(files.config)
 
+# Logs ------------------------------------------------
 log = Namespace(
     path = _conf['Log']['path'],
 )
 log.controllers = os.path.join(log.path, 'controllers')
 
+# XML ------------------------------------------------
 xml = Namespace(
     path = _conf['XML']['path'],
     empty_field_name = _conf['XML']['if_empty_field_name'],
@@ -40,7 +42,7 @@ splitter.whitespace += ','
 splitter.whitespace_split = True
 xml.ignore = list(splitter)
 
-
+# Detector defaults -------------------------------------
 detectorDefaults = Namespace(
     max_epochs = int(_conf['AnomalyDetector']['max_epochs']),
     win_size = int(_conf['AnomalyDetector']['window']),
@@ -49,18 +51,19 @@ detectorDefaults = Namespace(
     k = float(_conf['AnomalyDetector']['k']),
 )
 
-
+# Trainer defaults ----------------------------------------
 detectorTrainer = Namespace(
     path = _conf['Trainer']['path'],
     retrain_patience = int(_conf['Trainer']['retrain_patience']),
 )
 
-
-datasets = Namespace(
-    path = _conf['Datasets']['path']
+# Timeseries ----------------------------------------------
+timeseries = Namespace(
+    path = _conf['Timeseries']['group_path'],
+    date_column = _conf['Timeseries']['date_column'],
 )
 
-
+# Filter --------------------------------------------------
 seriesFilter = Namespace(
     min_d_points = int(_conf['SeriesFilter']['min_data_points']),
     patience = int(_conf['SeriesFilter']['serie_patience']),

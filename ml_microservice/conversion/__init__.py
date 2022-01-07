@@ -11,14 +11,14 @@ from ml_microservice import constants
 IGNORES = constants.xml.ignore
 IDS = constants.xml.ids
 UNNAMED = constants.xml.empty_field_name
+DATE_COL = constants.timeseries.date_column
 
 logger = logging.getLogger("xml2csv")
 logger.setLevel(logging.INFO)
 
 class RowAggregator():
-    def __init__(self, date_col, date_format):
+    def __init__(self, date_col = DATE_COL):
         self.date_col = date_col
-        self.date_format = date_format
         self.dfs = {}
         self.dates = []
 
@@ -68,15 +68,13 @@ class Xml2Csv():
     def __init__(self, 
         default_unnamed = UNNAMED, 
         ignore_list: list = IGNORES, 
-        id_list: list = IDS
+        id_patterns: list = IDS,
     ):
-        self._ignore_list = ignore_list
-        self._ids = id_list
+        self._ignore_list = ignore_list if len(ignore_list) else IGNORES
+        self._ids = id_patterns if len(ignore_list) else IDS
         logging.debug(f"ids: {self._ids}, ignores: {self._ignore_list}")
 
         self._default_unamed = default_unnamed
-        self._date_col = "Date"
-        self._date_format = "%Y-%m-%d"
         self._t_start = 0
         self._t_end = 0
     
@@ -108,10 +106,7 @@ class Xml2Csv():
         self._t_start = time.time()
         self._t_end = time.time()
 
-        rowAgg = RowAggregator(
-            self._date_col, 
-            self._date_format
-        )
+        rowAgg = RowAggregator()
         #rowAgg.set_mode(self.is_mono(xml))
         
         data = ElementTree.fromstring(xml)

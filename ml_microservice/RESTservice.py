@@ -74,23 +74,30 @@ def build_app():
         return controllers.ListForecasters().handle()
 
     # Datasets
-    @app.route('/api/datasets/local')
+    @app.route('/api/timeseries/local')
     def local_datasets():
-        logging.info('datasets local')
+        logging.info('timeseries local')
         reload(controllers)
         return controllers.ListDatasets().handle()
 
-    @app.route('/api/datasets/local/<label>/<dataset>')
-    def dataset_exploration(label, dataset):
-        logging.info('explore dataset: {:s}.{:s}'.format(label, dataset))
+    @app.route('/api/timeseries/local/<group>/<dimension>')
+    def dataset_exploration(group, dimension):
+        logging.info('explore dimension: {:s}.{:s}'.format(group, dimension))
         reload(controllers)
-        return controllers.ExploreDataset(label=label, dataset=dataset).handle()
+        return controllers.ExploreDataset(
+            group = group, 
+            dimension = dimension
+        ).handle()
 
-    @app.route('/api/datasets/local/<label>/<dataset>/<column>')
-    def column_exploration(label, dataset, column):
-        logging.info('explore column: {:s}.{:s}.{:s}'.format(label, dataset, column))
+    @app.route('/api/timeseries/local/<group>/<dimension>/<tsID>')
+    def column_exploration(group, dimension, tsID):
+        logging.info('explore timeseries: {:s}.{:s}.{:s}'.format(group, dimension, tsID))
         reload(controllers)
-        return controllers.ExploreColumn(label=label, dataset=dataset, column=column).handle()
+        return controllers.ExploreColumn(
+            group = group, 
+            dimension = dimension, 
+            tsID = tsID
+        ).handle()
 
     # Generic HTTP error handling
     @app.errorhandler(HTTPException)

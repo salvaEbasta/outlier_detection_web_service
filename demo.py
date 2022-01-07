@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 from ml_microservice import constants as c
 
 URL = "http://localhost:5000/api/"
-if 'demo' in os.listdir(c.datasets.path):
-    shutil.rmtree(os.path.join(c.datasets.path, 'demo'))
+if 'demo' in os.listdir(c.timeseries.path):
+    shutil.rmtree(os.path.join(c.timeseries.path, 'demo'))
 if 'demo_test' in os.listdir(c.detectorTrainer.path):
     shutil.rmtree(os.path.join(c.detectorTrainer.path, 'demo_test'))
 # %%

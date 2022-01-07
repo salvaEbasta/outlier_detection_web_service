@@ -5,46 +5,51 @@ import pandas as pd
 
 from ml_microservice import constants as c
 from ml_microservice.conversion import Xml2Csv as x2c
+from tests import TEST_DIR
+
+XML_DIR = os.path.join(TEST_DIR, "xml")
+XML_PLURI = os.path.join(XML_DIR, 's5_2012_samples.xml')
+XML_MONO = os.path.join(XML_DIR, 's11_2012_samples.xml')
+
+def read_xml(path):
+    with open(path, 'r') as f:
+        content = "".join(f.read().replace("\n", ""))
+    return content
 
 def test_well_formed_xml_aggregator():
-    xml = 's5_2012_samples.xml'
-    # Read xml
-    xml_path = os.path.join(c.xml.path, xml)
-    with open(xml_path, 'r') as f:
-        xml_str = ''.join(f.read().replace('\n', ''))
-    print(xml_str[:1000])
+    content = read_xml(XML_PLURI)
+    print(content[:1000])
 
     converter = x2c()
-    assert not converter.is_mono(xml_str)
-    dsets = converter.parse(xml_str)
+    dfs = converter.parse(content)
 
-    cols = set(dsets[0][1].keys())
-    length = len(dsets[0][1][next(iter(dsets[0][1].keys()))])
-    for name, data in dsets:
-        print(name)
-        assert len(cols.difference(set(data.keys()))) == 0
-        assert len(set(data.keys()).difference(cols)) == 0
-        for col in data.keys():
-            assert length == len(data[col])
+    cols = None
+    length = -1
+    for dfID, df in dfs.items():
+        if cols is None:
+            cols = set(df.columns)
+        if length < 0:
+            length = len(df)
+        print(dfID)
+        assert length == len(df)
+        assert len(cols.difference(set(df.columns))) == 0
+        assert not any(df[c.timeseries.date_column].duplicated())
 
 def test_monodimensional_aggregator():
-    xml = 's11_2012_samples.xml'
-    # Read xml
-    xml_path = os.path.join(c.xml.path, xml)
-    with open(xml_path, 'r') as f:
-        xml_str = ''.join(f.read().replace('\n', ''))
-    print(xml_str[:1000])
+    content = read_xml(XML_MONO)
+    print(content[:1000])
 
     converter = x2c()
-    assert converter.is_mono(xml_str)
-    dsets = converter.parse(xml_str)
-
-    cols = set(dsets[0][1].keys())
-    length = len(dsets[0][1][next(iter(dsets[0][1].keys()))])
-    for name, data in dsets:
-        print(name)
-        print(data)
-        assert len(cols.difference(set(data.keys()))) == 0
-        assert len(set(data.keys()).difference(cols)) == 0
-        for col in data.keys():
-            assert length == len(data[col])
+    dfs = converter.parse(content)
+    
+    cols = None
+    length = -1
+    for dfID, df in dfs.items():
+        print(dfID)
+        if cols is None:
+            cols = set(df.columns)
+        if length < 0:
+            length = len(df)
+        assert length == len(df)
+        assert len(cols.difference(set(df.columns))) == 0
+        assert not any(df[c.timeseries.date_column].duplicated())

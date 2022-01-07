@@ -1,59 +1,97 @@
 import os
+import re
 import shutil
 
 import pandas as pd
 
 from ml_microservice import constants as c
 from ml_microservice import service_logic
-from ml_microservice.conversion import Xml2Csv as x2c
+from ml_microservice.conversion import Xml2Csv
+from tests import TEST_DIR
+from tests.test_xml2csv import XML_PLURI
+from tests.test_xml2csv import read_xml
+
+TS_DATA = os.path.join(TEST_DIR, "timeseries")
+GROUP = "testTSLib"
+
+def _init(group):
+    if os.path.exists(TS_DATA):
+        shutil.rmtree(TS_DATA)
+    os.makedirs(TS_DATA)
+    ts_lib = service_logic.TimeseriesLibrary(path = TS_DATA)
+    x2c = Xml2Csv()
+    dfs = x2c.convert(read_xml(XML_PLURI))
+    for dfID, df in dfs.keys():
+        ts_lib.save(GROUP, dfID, df)
+
+def _close():
+    shutil.rmtree(TS_DATA)
 
 def test_list_datasets():
-    dsets = os.listdir('data/datasets')
-    dlib = service_logic.DatasetsLibrary()
-    dlist = dlib.datasets
-    print(dlist)
-    assert len(dlist) == len(dsets)
+    _init(GROUP)
+
+    ts_list = os.listdir(TS_DATA)
+    ts_lib = service_logic.TimeseriesLibrary(path = TS_DATA)
+    tss = ts_lib.timeseries
+    print(tss)
+    assert len(tss) == len(ts_list)
+    
+    _close()
 
 def test_has_dataset():
-    label = 'jena'
-    dataset = 'original'
-    dlib = service_logic.DatasetsLibrary()
-    assert dlib.has(label, dataset)
+    group = GROUP
+    _init(group)
+    dim = "Classifica_su_venduto"
+
+    ts_lib = service_logic.TimeseriesLibrary(path = TS_DATA)
+    assert ts_lib.has(group, dim)
+    assert ts_lib.has_group(group)
+    assert ts_lib.has_dimension(dim)
+
+    _close()
 
 def test_fetch_dataset():
-    label = 'jena'
-    dataset = 'original'
-    dlib = service_logic.DatasetsLibrary()
-    dframe = dlib.fetch(label, dataset)
-    assert len(dframe)
+    _init()
+
+    group = GROUP
+    dim = "Classifica_su_venduto"
+    
+    x2c = Xml2Csv()
+    dfs = x2c.convert(read_xml(XML_PLURI))
+    assert dim in dfs.keys()
+    df = dfs[dim]
+
+    ts_lib = service_logic.TimeseriesLibrary()
+    fetched = ts_lib.fetch(group, dim)
+
+    assert fetched is not None
+    assert len(fetched) == len(df)
+    assert not any(fetched[c.timeseries.date_column].duplicated())
+    assert len(set(df.columns).difference(set(fetched.columns)) ) == 0
+
+    _close()
 
 def test_save():
-    label = 'test'
-    xml = 's11_2012_samples.xml'
-    xml_path = os.path.join(c.xml.path, xml)
-    with open(xml_path, 'r') as f:
-        xml_str = ''.join(f.read().replace('\n', ''))
-    converter = x2c()
-    dsets = converter.parse(xml_str)
+    group = GROUP + "_test_save"
     
-    dlib = service_logic.DatasetsLibrary()
-    for name, data in dsets:
-        dlib.save(label, name, data)
+    x2c = Xml2Csv()
+    dfs = x2c.convert(read_xml(XML_PLURI))
 
-    dest_path = os.path.join(dlib.storage, label)
-    assert os.path.exists(dest_path) and len(os.listdir(dest_path)) == 1
-    print(os.listdir(dest_path))
+    ts_lib = service_logic.TimeseriesLibrary(path = TS_DATA)    
 
-    dframes = [(d[:-4], pd.read_csv(os.path.join(dest_path, d), index_col='Unnamed: 0')) for d in os.listdir(dest_path)]
-    for k, v in dframes:
-        match = False
-        for n, d in dsets:
-            if k == n:
-                match = True
-                break
-        assert match
-        assert len(set(v.columns).difference(set(d.keys()))) == 0
-        assert len(set(d.keys()).difference(set(v.columns))) == 0
-        for col in d.keys():
-            assert len(v[col]) == len(d[col])
-    shutil.rmtree(dest_path)
+    for dfID, df in dfs.items():
+        ts_lib.save(group, dfID, df)
+
+    group_path = os.path.join(TS_DATA, group)
+    assert os.path.exists(group_path)
+    assert len(dfs) == os.listdir(group_path)
+    for dfID in dfs.keys():
+        assert any([
+            re.match(".+{:s}.csv".format(dfID), f) is not None 
+                for f in os.listdir(group_path)
+        ])
+        saved = pd.read_csv(os.path.join(group_path, "{:s}.csv".format(dfID)))
+        assert len(saved) == len(df)
+        assert len(set(saved.columns).difference(set(df.columns))) == 0
+        
+    shutil.rmtree(group_path)
