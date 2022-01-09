@@ -1,5 +1,6 @@
 import os
 import json
+import joblib
 import datetime
 from typing import Tuple, Dict
 import time
@@ -9,9 +10,24 @@ import numpy as np
 import pandas as pd
 from tensorflow import keras
 import kerastuner as kt
+from sklearn.base import BaseEstimator, ClassifierMixin
 
+from ml_microservice import configuration as cfg
 from . import model_factory
 from . import metrics
+
+class AnomalyDetector(BaseEstimator, ClassifierMixin):
+    def fit(self, X, y=None):
+        raise NotImplementedError()
+    
+    def predict(self, X):
+        raise NotImplementedError()
+    
+    def save(self, path_dir):
+        """
+        Save the model in the \'path_dir\' directory
+        """
+        raise NotImplementedError()
 
 class Detector():
     def __init__(self, window_size=50, l=0.01, k=2, forecasting_model="linear", path=None):

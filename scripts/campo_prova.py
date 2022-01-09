@@ -19,8 +19,18 @@ for i, v in enumerate(centers):
     print(X[np.argmin(np.linalg.norm(X - v, axis=1))])
 
 # %%
+f1 = "{:s}.f1"
+f2 = f1.format("{:s}.f2")
+import re
+re.match(f2.format(".+"), "prova.f2.f1")
+
+# %%
 import numpy as np
-lbls = np.array([0, 0, 0, 1, 1, 1, 2], dtype=int)
-np.sum(lbls == 2)
+import pandas as pd
+df = pd.DataFrame({'p1': [np.nan, 2, np.nan, 1, 3, 3], 'p2': [np.nan, 3 ,4, np.nan, 4, 4]})
+df1 = pd.DataFrame({'p1': [np.nan, 2, np.nan, 1, 3, 3], 'p2': [np.nan, 3 ,4, np.nan, 4, 4]})
+for _, r in df1.iterrows():
+    df.loc[len(df)] = r
+df
 
 # %%

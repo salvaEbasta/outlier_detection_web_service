@@ -36,30 +36,30 @@ def build_app():
             logging.info(f"Anomaly detectors: {request}")
             return controllers.NewDetector(request=request).handle()
 
-    @app.route('/api/anomaly_detectors/<label>/<version>', methods=['GET', 'POST'])
-    def detector(label, version):
-        logging.info('detector: {:s}.{:s}[{:s}]'.format(label, version, request.method))
+    @app.route('/api/anomaly_detectors/<mID>/<version>', methods=['GET', 'POST'])
+    def detector(mID, version):
+        logging.info('detector: {:s}.{:s}[{:s}]'.format(mID, version, request.method))
         reload(controllers)
         if request.method == 'GET':
-            return controllers.ShowDetector(label, version).handle()
+            return controllers.ShowDetector(mID, version).handle()
         elif request.method == 'POST':
             return controllers.Detect(
-                identifier = label, 
+                identifier = mID, 
                 version = version, 
                 request = request
             ).handle()
     
-    @app.route('/api/anomaly_detectors/<label>/<version>/history')
-    def detectors_history(label, version):
-        logging.info('detector history: {:s}.{:s}'.format(label, version))
+    @app.route('/api/anomaly_detectors/<mID>/<version>/history')
+    def detectors_history(mID, version):
+        logging.info('detector history: {:s}.{:s}'.format(mID, version))
         reload(controllers)
-        return controllers.ShowDetectorHistory(label, version).handle()
+        return controllers.ShowDetectorHistory(mID, version).handle()
     
-    @app.route('/api/anomaly_detectors/<label>/<version>/parameters')
-    def detectors_params(label, version):
-        logging.info('detector params: {:s}.{:s}'.format(label, version))
+    @app.route('/api/anomaly_detectors/<mID>/<version>/parameters')
+    def detectors_params(mID, version):
+        logging.info('detector params: {:s}.{:s}'.format(mID, version))
         reload(controllers)
-        return controllers.ShowDetectorParameters(label, version).handle()
+        return controllers.ShowDetectorParameters(mID, version).handle()
 
     # Xml
     @app.route('/api/conversion/xml', methods=['POST'])
@@ -76,13 +76,13 @@ def build_app():
         return controllers.ListForecasters().handle()
 
     # Datasets
-    @app.route('/api/timeseries/local')
+    @app.route('/api/timeseries')
     def local_datasets():
-        logging.info('timeseries local')
+        logging.info('timeseries: ')
         reload(controllers)
         return controllers.ListDatasets().handle()
 
-    @app.route('/api/timeseries/local/<group>/<dimension>')
+    @app.route('/api/timeseries/<group>/<dimension>')
     def dataset_exploration(group, dimension):
         logging.info('explore dimension: {:s}.{:s}'.format(group, dimension))
         reload(controllers)
@@ -91,7 +91,7 @@ def build_app():
             dimension = dimension
         ).handle()
 
-    @app.route('/api/timeseries/local/<group>/<dimension>/<tsID>')
+    @app.route('/api/timeseries/<group>/<dimension>/<tsID>')
     def column_exploration(group, dimension, tsID):
         logging.info('explore timeseries: {:s}.{:s}.{:s}'.format(group, dimension, tsID))
         reload(controllers)
