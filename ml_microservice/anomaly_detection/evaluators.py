@@ -9,6 +9,8 @@ from .preprocessing import Preprocessor
 
 def load_history(path_dir) -> pd.DataFrame:
     if not os.path.exists(path_dir):
+        h = pd.DataFrame()
+        h[cfg.evaluator.date_column] = []
         return pd.DataFrame()
     
     h_path = os.path.join(path_dir, cfg.evaluator.history_file)
@@ -17,7 +19,7 @@ def load_history(path_dir) -> pd.DataFrame:
 class Evaluator:
     def evaluate(self, preprocessor: Preprocessor, forget = True):
         """
-        -> y_hat : prediction on test data
+        -> {score: float, }
         """
         raise NotImplementedError()
 
@@ -49,4 +51,7 @@ class AbstractEvaluator(Evaluator):
 class WindGaussEvaluator(Evaluator):
     def __init__(self) -> None:
         super().__init__()
-        
+    
+    def evaluate(self, preprocessor: Preprocessor, forget=True):
+        #if preprocessor.
+        return {}

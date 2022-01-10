@@ -2,11 +2,22 @@ import json
 import os
 
 from ml_microservice import configuration as cfg
+from ml_microservice.anomaly_detection.models.windowed_gaussian import WindowedGaussian
 
 from .preprocessing import Preprocessor
 
 class Tuner():
     def tune(self, preprocessor: Preprocessor):
+        """
+        Must update:
+        self.explored_cfgs = dict
+        Must set:
+        self.best_config_ = dict
+        self.best_model_ = AnomalyDetector
+        self.best_score_ = float
+        Return:
+         -> self
+        """
         raise NotImplementedError()
     
     def save_results(self, path_dir):
@@ -15,8 +26,6 @@ class Tuner():
 class AbstractTuner(Tuner):
     def __init__(self):
         self._search_space = {}
-        self.best_model = None
-        self.best_config = None
         self.explored_cfgs = []
 
     @property
@@ -33,3 +42,13 @@ class AbstractTuner(Tuner):
 class WindGaussTuner(AbstractTuner):
     def __init__(self):
         super().__init__()
+        self._search_space = {
+            "w": [32, 64, 128, 256],
+            "k": [16, 32, 64, 128],
+        }
+
+    def tune(self, preprocessor: Preprocessor):
+        self.best_model_ = WindowedGaussian()
+        self.best_config_ = self.best_model_.get_params()
+        self.best_score_ = 0
+        return self

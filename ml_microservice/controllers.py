@@ -1,21 +1,8 @@
-import os
-from threading import Thread
 from typing import Dict, List
 import logging
 
 from ml_microservice.logic.facade import LogicFacade
 from ml_microservice import configuration as cfg
-from ml_microservice.anomaly_detection.trainer import Trainer
-from ml_microservice.logic import metadata
-from ml_microservice.logic import timeseries_lib
-
-from ml_microservice.logic.summary import Summary
-from ml_microservice.logic.detector_trainer import DetectorTrainer
-from ml_microservice.anomaly_detection import detector
-
-from ml_microservice.logic.detector_lib import AnomalyDetectorsLibrary
-from ml_microservice.anomaly_detection.factory import Factory
-from ml_microservice.anomaly_detection import evaluators
 
 class Controller():
     def __init__(self, lvl = logging.DEBUG):
@@ -676,6 +663,7 @@ class DetectorEvaluate(Controller):
                 'evaluation': {
                     "anomaly_class": tmp["y_hat"],
                     "total_time(s)": tmp["eval_time"],
+                    "scores": tmp["scores"],
                 }
             }
             if "dates" in tmp:
