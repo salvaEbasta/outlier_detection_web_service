@@ -7,7 +7,7 @@ import numpy as np
 
 from ml_microservice import configuration as cfg
 from ml_microservice.logic.timeseries_lib import TimeseriesLibrary
-from ml_microservice.logic.summary import Summary, STATUS
+from ml_microservice.legacy.summary import Summary, STATUS
 from ml_microservice.anomaly_detection import preprocessing, model_factory, detector
 
 class DetectorTrainer():

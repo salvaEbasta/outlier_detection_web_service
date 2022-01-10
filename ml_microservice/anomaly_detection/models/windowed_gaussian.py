@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 from ml_microservice import configuration as cfg
-from anomaly_detection.detector import AnomalyDetector
+from ..detector import AnomalyDetector
 
 def q_function(mean, std_dev, x):
     """
