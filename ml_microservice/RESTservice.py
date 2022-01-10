@@ -18,7 +18,10 @@ def build_app():
         os.makedirs(os.path.split(log_file)[0])
     
     logging.basicConfig(filename = log_file)
-    
+    console = logging.StreamHandler()
+    console.setLevel(logging.DEBUG)
+    logging.getLogger('').addHandler(console)
+
     app = Flask(__name__)
 
     @app.route('/')

@@ -539,7 +539,7 @@ class DetectPredict(AbstractController):
             raise ValueError('The field \'data\' must be a dict')
         
         self.values = self.data.get("values", None)
-        if "values" is None:
+        if self.values is None:
             raise ValueError('The field \'values\' must be specified under \'data\'')
         if type(self.values) is not List[float]:
             raise ValueError('The field \'data\':\'values\' must be a list of floats')
