@@ -16,7 +16,7 @@ def test_window_building():
     label_width = 1
     total_width = input_width + label_width
     train = np.array([0,1,2,3,4,5,6,7,8,9,10])
-    preproc = preprocessing.Preprocessor(
+    preproc = preprocessing.OldPreprocessor(
         train, 
         input_width=input_width, 
         label_width=label_width
@@ -39,7 +39,7 @@ def test_window_building_small_input():
     input_width = 3
     label_width = 1
     train = [1]
-    preproc = preprocessing.Preprocessor(
+    preproc = preprocessing.OldPreprocessor(
         train, 
         input_width=input_width, 
         label_width=label_width
@@ -57,7 +57,7 @@ def test_make_dataset():
     label_width = 1
     total_width = input_width + label_width
     train = np.array([0,1,2,3,4,5,6,7,8,9,10])
-    preproc = preprocessing.Preprocessor(
+    preproc = preprocessing.OldPreprocessor(
         train, 
         input_width=input_width, 
         label_width=label_width

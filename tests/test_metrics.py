@@ -8,7 +8,7 @@ def test_naive_model():
     train = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20])
     test = np.array([20,21,22,23,24,25,100,27,28,29,30,100])
     
-    preproc = preprocessing.Preprocessor(train=train, test=test, input_width=window_size)
+    preproc = preprocessing.OldPreprocessor(train=train, test=test, input_width=window_size)
 
     naive = metrics.NaivePredictor()
     naive.compile(loss="mse")
@@ -26,7 +26,7 @@ def test_naive_metric():
     train = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20])
     test = np.array([20,21,22,23,24,25,100,27,28,29,30,100])
     
-    preproc = preprocessing.Preprocessor(train=train, test=test, input_width=window_size)
+    preproc = preprocessing.OldPreprocessor(train=train, test=test, input_width=window_size)
 
     naive = metrics.NaivePredictor()
     naive.compile(loss="mse")
@@ -43,7 +43,7 @@ def test_naive_prediction():
     train = np.array([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20])
     test = np.array([20,21,22,23,24,25,100,27,28,29,30,100])
     
-    preproc = preprocessing.Preprocessor(train=train, test=test, input_width=window_size)
+    preproc = preprocessing.OldPreprocessor(train=train, test=test, input_width=window_size)
 
     naive = metrics.NaivePredictor()
     naive.compile(loss="mse")

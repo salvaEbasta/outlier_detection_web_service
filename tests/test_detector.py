@@ -15,7 +15,7 @@ def test_detector_dimensions():
     dev = np.array([0,1,2,3,4,5,6,7,8])
     test = np.array([20,21,22,23,24,25,100,27,28,29,30,100])
     
-    preproc = preprocessing.Preprocessor(train=train, dev=dev, test=test, input_width=window_size)
+    preproc = preprocessing.OldPreprocessor(train=train, dev=dev, test=test, input_width=window_size)
 
     d = detector.Detector(window_size=window_size, forecasting_model='test')
     d.fit(*preproc.train, dev_data=preproc.dev)
@@ -39,7 +39,7 @@ def test_save_n_load():
     os.makedirs(path)
 
     d0 = detector.Detector(window_size=window_size, forecasting_model='test')
-    pp = preprocessing.Preprocessor(train=train, dev=dev, input_width=window_size)
+    pp = preprocessing.OldPreprocessor(train=train, dev=dev, input_width=window_size)
     d0.fit(*pp.train, dev_data=pp.dev)
 
     old_ws = d0.window_size

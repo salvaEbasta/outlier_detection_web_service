@@ -1,14 +1,21 @@
-from importlib import reload
 import os
-from typing import List
+from threading import Thread
+from typing import Dict, List
 import logging
 
+from ml_microservice.logic.facade import LogicFacade
 from ml_microservice import configuration as cfg
+from ml_microservice.anomaly_detection.trainer import Trainer
+from ml_microservice.logic import metadata
+from ml_microservice.logic import timeseries_lib
+
 from ml_microservice.logic.summary import Summary
-from ml_microservice.logic.timeseries_lib import TimeseriesLibrary
 from ml_microservice.logic.detector_trainer import DetectorTrainer
-from ml_microservice.conversion import Xml2Csv
-from ml_microservice.anomaly_detection import model_factory, detector
+from ml_microservice.anomaly_detection import detector
+
+from ml_microservice.logic.detector_lib import AnomalyDetectorsLibrary
+from ml_microservice.anomaly_detection.factory import Factory
+from ml_microservice.anomaly_detection import evaluators
 
 class Controller():
     def __init__(self, lvl = logging.DEBUG):
@@ -37,6 +44,17 @@ class ConvertXML(Controller):
         self.payload = request.get_json()
 
     def _unpack(self, payload):
+        """
+        payload: {
+            "xml": str,
+            \["id_patterns": [str, ]],
+            \["ignore_patterns": [str, ]],
+            \["store": {
+                "group": str,
+                "override": bool
+            }]
+        }
+        """
         self.logger.info("Unpack: {}".format(payload))
 
         # Mandatory
@@ -49,37 +67,67 @@ class ConvertXML(Controller):
             raise ValueError('The field \'id_patterns\' must be a list of strings')
         self.id_patterns = [payload.get('id_patterns')] if 'id_patterns' in payload else []
         
-        if 'ignore_list' in payload and type(payload['ignore_list']) is not List[str]:
-            raise ValueError('The field \'ignore_list\' must be a list of strings')
-        self.ignore_list = payload.get('ignore_list', [])
+        if 'ignore_patterns' in payload and type(payload['ignore_patterns']) is not List[str]:
+            raise ValueError('The field \'ignore_patterns\' must be a list of strings')
+        self.ignore_patterns = payload.get('ignore_patterns', [])
 
-        if 'store' in payload and type(payload['store']) is not bool:
-            raise ValueError('The field \'store\' must be a boolean')
-        self.store = payload.get('store', False)
-        if self.store and 'group' not in payload:
-            raise ValueError('The field \'group\' must be specified if the series is to be stored')
-        self.group = payload.get("group", None)
-        self.override = payload.get("override", False)
-
+        self.store = False
+        if 'store' in payload and type(payload['store']) is not dict:
+            raise ValueError('The field \'store\' must be a dict if specified')
+        self.store_info = payload.get('store', {})
+        if len(self.store_info):
+            self.store = True
+            if 'group' not in self.store_info or type(self.store_info["group"]) is not str:
+                raise ValueError('The field \'group\' must be specified if the series is to be stored')
+            if "override" not in self.store_info or type(self.store_info["override"]) is not bool:
+                raise ValueError('The field \'override\' must be specified if the series is to be stored')
+        self.group = self.store_info.get("group", None)
+        self.override = self.store_info.get("override", False)
 
     def _handle(self, *args, **kwargs):
+        """
+        {
+            "code": 200,
+            "extracted": [{
+                "dimension": str,
+                "data": [stuff,]
+            }, ],
+
+        }
+        """
         try:
             self._unpack(self.payload)
-            x2c = Xml2Csv(
-                ignore_list = self.ignore_list,
-                id_patterns = self.id_patterns
+            dfs = LogicFacade().convert_xml(
+                id_patterns=self.id_patterns,
+                ignore_patterns=self.ignore_patterns,
+                store=self.store,
+                xml=self.xml,
+                override=self.override,
+                groupID=self.group
             )
-            dfs = x2c.parse(self.xml)
-            self.logger.debug("Parsings: {}".format(dfs))
-            if self.store:
-                ts_lib = TimeseriesLibrary()
-                for dfID, df in dfs.items():
-                    ts_lib.save(self.group, dfID, df, self.override)
-            return {
+            dC = cfg.timeseries.date_column
+            tmp = {}
+            for dfID, df in dfs.items():
+                if dC in df.columns:
+                    df[dC] = df[dC].astype("string")
+                tmp[dfID] = {c: df[c].fillna(cfg.timeseries.nan_str).to_list() 
+                                for c in df.columns}
+            resp = {
                 'code': 200,
-                'stored': self.store,
-                'extracted': [{'dimension': dfID, 'data': df.to_dict()} for dfID, df in dfs],
-            }, 200
+                'extracted': [{
+                    'dimension': dfID,
+                    'data': df_dict,
+                    } for dfID, df_dict in tmp.items()
+                ],
+            }
+            if self.store:
+                resp.update({
+                        "stored": {
+                            "group": self.group,
+                            "override": self.override
+                        }
+                    })
+            return resp, 200
         except ValueError as e:
             return {
                 'code': 400,
@@ -87,47 +135,70 @@ class ConvertXML(Controller):
                 'description': str(e),
             }, 400
 
-class ListDatasets(Controller):
+class ListTimeseries(Controller):
     def __init__(self):
         super().__init__()
 
     def _handle(self, *args, **kwargs):
+        """
+        {
+            "code": int,
+            "timeseries": [{
+                "group": str,
+                "dimensions": [str, ]
+            }, ],
+        }
+        """
         return {
             'code': 200,
-            'available': TimeseriesLibrary().timeseries,
+            'timeseries': LogicFacade.list_ts(),
         }, 200
 
-class ExploreDataset(Controller):
+class ExploreTSDim(Controller):
     def __init__(self, group, dimension):
         super().__init__()
         self.group = group
         self.dimension = dimension
 
     def _handle(self, *args, **kwargs):
-        dset_lib = TimeseriesLibrary()
-        if not dset_lib.has_group(self.group):
-            return {
-                'code': 404,
-                'error': 'NotFound',
-                'description': 'Group \'{:s}\' not found'.format(self.group),
-            }, 404
-        elif not dset_lib.has(self.group, self.dimension):
-            return {
-                'code': 404,
-                'error': 'NotFound',
-                'description': 'Dimension \'{:s}\' not found in group \'{:s}\''.format(self.dimension, self.group),
-            }, 404
-        else:
-            df = dset_lib.fetch(self.group, self.dimension)
+        """
+        {
+            "code": int,
+            "group": {
+                "id": str,
+                "dimension": {
+                    "id": str,
+                    "tsIDs": [str, ],
+                    "shape": [int, ]
+                },
+            },
+        }
+        """
+        try:
+            df = LogicFacade().explore_ts_dim(
+                self.group,
+                self.dimension
+            )
+            df = df.drop(cfg.timeseries.date_column, axis = 1)
             return {
                 'code': 200,
-                'group': self.group,
-                'dimension': self.dimension,
-                'columns': list(df.columns),
-                'shape': list(df.values.shape),
+                'group': {
+                    "id": self.group,
+                    "dimension": {
+                        "id": self.dimension,
+                        "tsIDs": list(df.columns),
+                        "shape": [len(df), len(df.columns), ]
+                    },
+                },
             }, 200
+        except ValueError as ve:
+            return {
+                'code': 404,
+                'error': 'NotFound',
+                'description': str(ve),
+            }, 404
 
-class ExploreColumn(Controller):
+class ExploreTS(Controller):
     def __init__(self, group, dimension, tsID):
         super().__init__()
         self.group = group
@@ -135,62 +206,69 @@ class ExploreColumn(Controller):
         self.tsID = tsID
 
     def _handle(self, *args, **kwargs):
-        ts_lib = TimeseriesLibrary()
-        if not ts_lib.has_group(self.group):
+        """
+        {
+            "code": int,
+            "tsID": str,
+            "values": {idx: val, }
+        }
+        """
+        try:
+            vs = LogicFacade().explore_ts(
+                self.group,
+                self.dimension,
+                self.tsID
+            )
+            if self.tsID == cfg.timeseries.date_column:
+                vs = vs.astype("string")
+            return {
+                'code': 200,
+                'tsID': self.tsID,
+                'values': vs.fillna(cfg.timeseries.nan_str).to_dict()
+            }, 200
+        except ValueError as ve:
             return {
                 'code': 404,
                 'name': 'NotFound',
-                'description': "Group \'{:s}\' not found".format(self.group),
+                'description': str(ve),
             }, 404
-        if not ts_lib.has(self.group, self.dimension):
-            return {
-                'code': 404,
-                'name': 'NotFound',
-                'description': "Dimension \'{:s}\' not found in group \'{:s}\'".format(
-                    self.group,
-                    self.dimension
-                ),
-            }, 404
-        df = ts_lib.fetch(self.group, self.dimension)
-        if self.tsID not in df:
-            return {
-                'code': 404,
-                'name': 'NotFound',
-                'description': "Timeseries ID \'{:s}\' not found in \'{:s}-{:s}\'".format(
-                    self.tsID,
-                    self.group,
-                    self.dimension
-                ),
-            }, 404 
-        df = ts_lib.fetch_ts(self.group, self.dimension, self.tsID)
-        return {
-            'code': 200,
-            'tsID': self.tsID,
-            'values': df.to_dict()
-        }, 200
 
-class ListForecasters(Controller):
+class ListMethods(Controller):
     def __init__(self):
         super().__init__()
 
     def _handle(self, *args, **kwargs):
+        """
+        {
+            "code": int,
+            "methods": [str, ]
+        }
+        """
         return {
             'code': 200,
-            'available': model_factory.ForecasterFactory().available(),
+            'methods': LogicFacade().list_methods(),
         }, 200
 
-class ListDetectors(Controller):
+class ListSavedDetectors(Controller):
     def __init__(self):
         super().__init__()
 
     def _handle(self, *args, **kwargs):
-        tmp = DetectorTrainer().detectors_list
+        """
+        {
+            "code": int,
+            "saved": [{
+                "mID": str, 
+                "versions": [str, ]
+            }, ]
+        }
+        """
         return {
             'code': 200,
-            'detectors': tmp,
+            'saved': LogicFacade().list_save_detectors(),
         }, 200
 
-class NewDetector(Controller):
+class DetectorTrain(Controller):
     def __init__(self, request):
         super().__init__()
         self.logger.info(f"Request: {request.get_json()}")
@@ -199,85 +277,159 @@ class NewDetector(Controller):
         self.logger.debug("End __init__")
 
     def _unpack(self, payload):
-        self.identifier = None
-        self.training = None
-        self.forecasting = None
+        """
+        {
+            "train": {
+                "groupID": str,
+                "dimID": str,
+                "tsID": str,
+            },
+            "method": str,
+            "mID": str,
+        }
+        """
+        self.type = None
         
-        self.logger.debug('Payload: check \'identifier\'')
-        if 'identifier' not in payload:
-            raise ValueError('The field \'identifier\' must be specified')
-        self.identifier = payload['identifier']
-        if type(self.identifier) is not str:
-            raise ValueError('The identifier must be a string')
+        # Mandatory
+        self.logger.debug('Payload: check \'mID\'')
+        if 'mID' not in payload:
+            raise ValueError('The field \'mID\' must be specified')
+        if type(payload["mID"]) is not str:
+            raise ValueError('The mID must be a string')
+        self.mID = payload['mID']
         
-        self.logger.debug('Payload: check \'training\'')
-        if 'training' not in payload:
-            raise ValueError('A field \'training\' must be specified. Must contain a label, a dataset and a column')
-        else:
-            self.training = dict()
-
-            if 'label' not in payload['training']:
-                raise ValueError('A field \'label\' in \'training\' must be specified')
-            else:
-                self.training['label'] = payload['training']['label']
-                if type(self.training['label']) is not str:
-                    raise ValueError('The training label must be a string')
-
-            if 'dataset' not in payload['training']:
-                raise ValueError('A field \'dataset\' in \'training\' must be specified')
-            else:
-                self.training['dataset'] = payload['training']['dataset']
-                if type(self.training['dataset']) is not str:
-                    raise ValueError('The training dataset must be a string')
+        self.logger.debug('Payload: check \'train\'')
+        if "train" not in payload:
+            raise ValueError('A field \'train\' must be specified. Must be a dict with keys \'groupID\', \'dimID\', \'tsID\'')
+        if 'groupID' not in payload['train'] \
+            or "dimID" not in payload['train'] \
+            or "tsID" not in payload['train']:
+            raise ValueError('The field \'train\' must be a dict with keys \'groupID\', \'dimID\', \'tsID\'')
         
-            if 'column' in payload:
-                self.training['column'] = payload['training']['column']
-                if type(self.training['column']) is not str:
-                    raise ValueError('The training column must be a string')
-            else:
-                self.training['column'] = None
+        if type(payload["train"]["groupID"]) is not str:
+            raise ValueError('The field \'train\'-\'groupID\' must be a string')
+        self.groupID = payload["train"]["groupID"]
+        
+        if type(payload["train"]["dimID"]) is not str:
+            raise ValueError('The field \'train\'-\'dimID\' must be a string')
+        self.dimID = payload["train"]["dimID"]
 
-        self.logger.debug('Payload: check \'forecasting_model\'')
-        if 'forecasting_model' not in payload:
-            raise ValueError('A field \'forecasting_model\' must be specified')
-        self.forecasting = payload['forecasting_model']
-        if type(self.forecasting) is not str:
-            raise ValueError('The forecasting model must be a string')
+        if type(payload["train"]["tsID"]) is not str:
+            raise ValueError('The field \'train\'-\'tsID\' must be a string')
+        self.tsID = payload["train"]["tsID"]
+        
+        if "method" not in payload or type(payload["method"]) is not str:
+            raise ValueError('The field \'method\' must be specified and have a string value')
+        self.method = payload["method"]
         
     def _handle(self, *args, **kwargs):
+        """
+        {
+            "code": int,
+            "train": {
+                "timeseries": {
+                    "groupID": str,
+                    "dimID": str,
+                    "tsID": str,
+                },
+                "overview": {
+                    "total_time(s)": float,
+                    "best_config": dict,
+                    "last_train_IDX": int,
+                    "last_dev_IDX": int,
+                }
+            },
+            "method": {
+                "id": str,
+            },
+            "model": {
+                "mID": str,
+                "version": str
+            }
+        }
+        """
         self.logger.debug("Start _handle")
         try:
             self._unpack(self.payload)
             self.logger.debug("done unpacking")
-            out = DetectorTrainer().train(
-                                                label=self.identifier, 
-                                                training = self.training,
-                                                forecasting_model=self.forecasting, 
-                                                )
+            result = LogicFacade().detector_train(
+                mID=self.mID,
+                groupID=self.groupID,
+                dimID=self.dimID,
+                tsID=self.tsID,
+                method=self.method,
+            )
             return {
-                'code': 201,
-                'result': out,
+                "code": 201,
+                "model": {
+                    "mID": self.mID,
+                    "version": result["version"],
+                },
+                "train": {
+                    "timeseries": {
+                        "groupID": self.groupID,
+                        "dimID": self.dimID,
+                        "tsID": self.tsID,
+                    },
+                    "overview": {
+                        "total_time(s)": result["train_time"],
+                        "last_train_IDX": result["last_train_IDX"],
+                        "last_dev_IDX": result["last_dev_IDX"],
+                        "best_config": result["best_config"]
+                    }
+                },
+                "method": {
+                    "id": self.method,
+                },
             }, 201
         except ValueError as e:
             return {
+                "code": 404,
+                "name": "NotFound",
+                "description": str(e),
+            }, 404
+        except RuntimeError as e:
+            return {
                 'code': 400,
                 'name': 'BadRequest',
                 'description': str(e),
             }, 400
 
-class ShowDetector(Controller):
-    def __init__(self, identifier, version):
-        self.label = identifier
+class DetectorMetadata(Controller):
+    def __init__(self, mID, version):
+        self.mID = mID
         self.version = version
 
     def _handle(self, *args, **kwargs):
+        """
+        {
+            "code": int,
+            "metadata": {
+                "status: {
+                    "name": str,
+                    "code": int,
+                },
+                "type": str,
+                "created": str,
+                "timeseries": {
+                    \["groupID": str,
+                      "dimID": str,
+                      "tsID": str
+                    ]
+                },
+                "training": {
+                    \["total_time(s)": float,
+                      "last_train_IDX": int,
+                      \["last_dev_IDX": int,]
+                    ]
+                }
+            }
+        }
+        """
         try:
-            env = DetectorTrainer().retrieve_env(self.label, self.version)
-            summ = Summary()
-            summ.load(os.path.join(env, cfg.files.detector_summary))
             return {
                 'code': 200,
-                'summary': summ.values,
+                'metadata': LogicFacade().detector_metadata(self.mID, self.version),
             }, 200
         except ValueError as e:
             return {
@@ -285,20 +437,41 @@ class ShowDetector(Controller):
                 'name': 'BadRequest',
                 'description': str(e),
             }, 400
+        except RuntimeError as e:
+            return {
+                "code": 404,
+                "name": "NotFound",
+                "description": str(e)
+            }, 404
 
 class ShowDetectorHistory(Controller):
-    def __init__(self, identifier, version):
-        self.label = identifier
+    def __init__(self, mID, version):
+        self.mID = mID
         self.version = version
 
     def _handle(self, *args, **kwargs):
+        """
+        {
+            "code": int,
+            "mID": str,
+            "version": str,
+            "history": {
+                str: [,]
+            }
+        }
+        """
         try:
-            env = DetectorTrainer().retrieve_env(self.label, self.version)
-            history = detector.History()
-            history.load(os.path.join(env, cfg.files.detector_history))
+            history = LogicFacade().detector_history(self.mID, self.version)
+            for c in history.columns:
+                history[c] = history[c].fillna(cfg.timeseries.nan_str)
+                if c == cfg.evaluator.date_column:
+                    history[c] = history[c].astype("string")
             return {
                 'code': 200,
-                'history': history.values,
+                "mID": self.mID,
+                "version": self.version,
+                'history': {c: history[c].to_list() 
+                                for c in history.columns}
             }, 200
         except ValueError as e:
             return {
@@ -306,22 +479,34 @@ class ShowDetectorHistory(Controller):
                 'name': 'BadRequest',
                 'description': str(e),
             }, 400
+        except RuntimeError as e:
+            return {
+                "code": 404,
+                "name": "NotFound",
+                "description": str(e)
+            }, 404
 
-class ShowDetectorParameters(Controller):
-    def __init__(self, identifier, version):
-        self.label = identifier
+class DetectorParameters(Controller):
+    def __init__(self, mID, version):
+        self.mID = mID
         self.version = version
     
     def _handle(self, *args, **kwargs):
+        """
+        {
+            "code": int,
+            "mID": str,
+            "version": str,
+            "params": dict,
+        }
+        """
         try:
-            dt = DetectorTrainer()
-            dt.load_detector(self.label, self.version)
-            params = {}
-            if dt.loaded:
-                params = dt._detector.params
+            
             return {
                 'code': 200,
-                'params': params,
+                "mID": self.mID,
+                "version": self.version,
+                'params': LogicFacade().detector_parameters(self.mID, self.version),
             }, 200
         except ValueError as e:
             return {
@@ -329,75 +514,188 @@ class ShowDetectorParameters(Controller):
                 'name': 'BadRequest',
                 'description': str(e),
             }, 400
+        except RuntimeError as e:
+            return {
+                "code": 404,
+                "name": "NotFound",
+                "description": str(e)
+            }, 404
 
-class Detect(Controller):
-    def __init__(self, identifier, version, request):
+class DetectPredict(Controller):
+    def __init__(self, mID, version, request):
         super().__init__()
-        self.logger.info("{}-{}: Request: {}".format(identifier, version, request.get_json()))
-        self.identifier = identifier
+        self.logger.info("{}-{}: Request: {}".format(mID, version, request.get_json()))
+        self.mID = mID
         self.version = version
         self.request = request
         self.payload = request.get_json()
         self.logger.debug("End __init__")
     
     def _unpack(self, payload):
+        """
+        {
+            "data": {
+                \["dates": [,],]
+                "values": [,],
+            }
+        }
+        """
         self.logger.debug("Unpacking: check data")
         self.data = payload.get('data', None)
-        if 'data' not in payload:
-            raise ValueError('A parameter \'data\' must be specified')
-
-        self.logger.debug("Unpacking: check store")
-        self.store = payload.get('store', False)
-        if type(self.store) is not bool:
-            raise ValueError('The \'store\' parameter must be a boolean')
-
-        self.logger.debug("Unpacking: check pre_load")
-        if 'pre_load' not in payload:
-            self.pre_load = None
-        else:
-            self.pre_load = dict()
-            if 'label' in payload['pre_load'] and \
-                    'dataset' in payload['pre_load'] and \
-                    'column' in payload['pre_load']:
-                self.pre_load['label'] = payload['pre_load']['label']
-                if type(self.pre_load['label']) is not str:
-                    raise ValueError('The pre_load label must be a string')
-
-                self.pre_load['dataset'] = payload['pre_load']['dataset']
-                if type(self.pre_load['dataset']) is not str:
-                    raise ValueError('The pre_load dataset must be a string')
-
-                self.pre_load['column'] = payload['pre_load']['column']
-                if type(self.pre_load['column']) is not str:
-                    raise ValueError('The pre_load column must be a string')
+        if self.data is None:
+            raise ValueError('A field \'data\' must be specified')
+        if type(self.data) is not Dict:
+            raise ValueError('The field \'data\' must be a dict')
+        
+        self.values = self.data.get("values", None)
+        if "values" is None:
+            raise ValueError('The field \'values\' must be specified under \'data\'')
+        if type(self.values) is not List[float]:
+            raise ValueError('The field \'data\':\'values\' must be a list of floats')
+        
+        self.dates = self.data.get("dates", None)
+        if self.dates is not None:
+            if type(self.dates) is not List[str]:
+                raise ValueError('The field \'data\':\'dates\' must be a list of strings')
+            if len(self.dates) != len(self.values) :
+                raise ValueError('The field \'data\':\'dates\' must be same length of \'data\':\'values\'')
         self.logger.debug("End Unpacking")
 
-
     def _handle(self, *args, **kwargs):
+        """
+        {
+            "code": int,
+            "mID": str,
+            "version": str,
+            "data": {
+                "values": [,],
+                \["dates": [,],]
+            }
+            "predictions": {
+                "anomaly_class": [,],
+                \["anomaly_score": [,],]
+                \["forecast": [,],]
+                "total_time(s)": float,
+            },
+        }
+        """
         try:
             self.logger.debug("Start _handle")
             self._unpack(self.payload)
-            trainer = DetectorTrainer()
-            trainer.load_detector(self.identifier, self.version)
-            self.logger.debug("Trainer ended loading model")
-            if not trainer.loaded:
-                return {
-                    'code': 409,
-                    'name': 'Conflict',
-                    'description': 'The detector @{:s}.{:s} is currently not available'.format(self.identifier, self.version),
-                }, 404
-            else:
-                out = trainer.detect(self.data, self.store, self.pre_load)
-                self.logger.debug("Done detction")
-                return {
-                    'code': 200,
-                    'results': out
-                }, 200
+            tmp = LogicFacade().detector_predict(
+                mID=self.mID,
+                version=self.version,
+                values=self.values,
+                dates=self.dates
+            )
+            resp = {
+                'code': 200,
+                "mID": self.mID,
+                "version": self.version,
+                "data": self.data,
+                'predictions': {
+                    "anomaly_class": tmp["y_hat"],
+                    "total_time(s)": tmp["pred_time"],
+                }
+            }
+            if "predict_prob" in tmp:
+                resp["predictions"]["anomaly_score"] = tmp["predict_prob"]
+            if "forecast" in tmp:
+                resp["predictions"]["forecast"] = tmp["forecast"]
+            return resp, 200
         except ValueError as e:
             return {
                 'code': 400,
                 'name': 'BadRequest',
                 'description': str(e),
             }, 400
+        except RuntimeError as e:
+            return {
+                "code": 404,
+                "name": "NotFound",
+                "description": str(e)
+            }, 404
+        except Exception as e:
+            self.logger.warning(str(e))
+
+class DetectorEvaluate(Controller):
+    def __init__(self, mID, version):
+        super().__init__()
+        self.logger.info("{}-{}".format(mID, version))
+        self.mID = mID
+        self.version = version
+        self.payload = {"forget": False,}
+        self.logger.debug("End __init__")
+    
+    def set_request(self, r):
+        self.request = r
+        self.payload = r.get_json()
+        return self
+
+    def _unpack(self, payload):
+        """
+        {
+            "forget": bool,
+        }
+        """
+        self.logger.debug("Unpacking: check data")
+        if "forget" not in payload:
+            raise ValueError('The field \'forget\' must be specified')
+        self.forget = payload.get("forget", True)
+        if type(self.forget) is not bool:
+            raise ValueError('The field \'forget\' must be a bool')
+        self.logger.debug("End Unpacking")
+
+    def _handle(self, *args, **kwargs):
+        """
+        {
+            "code": int,
+            "mID": str,
+            "version": str,
+            "data": {
+                "values": [,],
+                \["dates": [,],]
+            }
+            "evaluation": {
+                "anomaly_class": [,],
+                \["anomaly_score": [,],]
+                \["forecast": [,],]
+                "total_time(s)": float,
+            },
+        }
+        """
+        try:
+            tmp = LogicFacade().detector_eval(self.mID, self.version)
+            resp = {
+                'code': 200,
+                "mID": self.mID,
+                "version": self.version,
+                "data": {
+                    "values": tmp["values"],
+                },
+                'evaluation': {
+                    "anomaly_class": tmp["y_hat"],
+                    "total_time(s)": tmp["eval_time"],
+                }
+            }
+            if "dates" in tmp:
+                resp["data"]["dates"] = tmp["dates"]
+            if "predict_prob" in tmp:
+                resp["predictions"]["anomaly_score"] = tmp["predict_prob"]
+            if "forecast" in tmp:
+                resp["predictions"]["forecast"] = tmp["forecast"]
+            return resp, 200
+        except ValueError as e:
+            return {
+                'code': 400,
+                'name': 'BadRequest',
+                'description': str(e),
+            }, 400
+        except RuntimeError as e:
+            return {
+                "code": 404,
+                "name": "NotFound",
+                "description": str(e)
+            }, 404
         except Exception as e:
             self.logger.warning(str(e))

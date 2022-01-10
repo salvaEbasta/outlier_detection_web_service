@@ -1,5 +1,5 @@
 import os
-from importlib import reload
+#from importlib import reload
 import logging
 
 from flask import Flask
@@ -23,81 +23,91 @@ def build_app():
 
     @app.route('/')
     def index():
-        return redirect(url_for('anomaly_detectors'))
+        return redirect(url_for('anomaly_detection'))
 
-    # AnomalyDetectors
-    @app.route('/api/anomaly_detectors', methods=['GET', 'POST'])
-    def anomaly_detectors():
-        reload(controllers)
+    # AnomalyDetection
+    @app.route('/api/anomaly_detection', methods=['GET', 'POST'])
+    def anomaly_detection():
+        #reload(controllers)
         logging.info('In Anomaly Detector')
         if request.method == 'GET':
-            return controllers.ListDetectors().handle()
+            return controllers.ListSavedDetectors().handle()
         elif request.method == 'POST':
             logging.info(f"Anomaly detectors: {request}")
-            return controllers.NewDetector(request=request).handle()
-
-    @app.route('/api/anomaly_detectors/<mID>/<version>', methods=['GET', 'POST'])
+            return controllers.DetectorTrain(request=request).handle()
+    
+    @app.route('/api/anomaly_detection/methods')
+    def list_models():
+        logging.info('anom_detect/methods')
+        #reload(controllers)
+        return controllers.ListMethods().handle()
+    
+    @app.route('/api/anomaly_detection/<mID>/<version>', methods=['GET', 'POST'])
     def detector(mID, version):
         logging.info('detector: {:s}.{:s}[{:s}]'.format(mID, version, request.method))
-        reload(controllers)
+        #reload(controllers)
         if request.method == 'GET':
-            return controllers.ShowDetector(mID, version).handle()
+            return controllers.DetectorMetadata(mID, version).handle()
         elif request.method == 'POST':
-            return controllers.Detect(
+            return controllers.DetectPredict(
                 identifier = mID, 
                 version = version, 
                 request = request
             ).handle()
     
-    @app.route('/api/anomaly_detectors/<mID>/<version>/history')
+    @app.route('/api/anomaly_detection/<mID>/<version>/evaluate', methods=['GET', 'POST'])
+    def detector_evaluation(mID, version):
+        logging.info('detector: {:s}.{:s}[{:s}]'.format(mID, version, request.method))
+        #reload(controllers)
+        if request.method == 'GET':
+            return controllers.DetectorEvaluate(mID, version).handle()
+        elif request.method == 'POST':
+            c = controllers.DetectorEvaluate(mID, version)
+            c.set_request(request)
+            return c.handle()
+
+    @app.route('/api/anomaly_detection/<mID>/<version>/history')
     def detectors_history(mID, version):
         logging.info('detector history: {:s}.{:s}'.format(mID, version))
-        reload(controllers)
+        #reload(controllers)
         return controllers.ShowDetectorHistory(mID, version).handle()
     
-    @app.route('/api/anomaly_detectors/<mID>/<version>/parameters')
+    @app.route('/api/anomaly_detection/<mID>/<version>/parameters')
     def detectors_params(mID, version):
         logging.info('detector params: {:s}.{:s}'.format(mID, version))
-        reload(controllers)
-        return controllers.ShowDetectorParameters(mID, version).handle()
+        #reload(controllers)
+        return controllers.DetectorParameters(mID, version).handle()
 
     # Xml
     @app.route('/api/conversion/xml', methods=['POST'])
     def dump_xml():
         logging.info('Convert xml')
-        reload(controllers)
+        #reload(controllers)
         return controllers.ConvertXML(request=request).handle()
-
-    # TimeSeriesForecasting
-    @app.route('/api/time_series_forecasting/models')
-    def forecasting_models():
-        logging.info('tsf/models')
-        reload(controllers)
-        return controllers.ListForecasters().handle()
 
     # Datasets
     @app.route('/api/timeseries')
-    def local_datasets():
+    def list_timeseries():
         logging.info('timeseries: ')
-        reload(controllers)
-        return controllers.ListDatasets().handle()
+        #reload(controllers)
+        return controllers.ListTimeseries().handle()
 
-    @app.route('/api/timeseries/<group>/<dimension>')
-    def dataset_exploration(group, dimension):
-        logging.info('explore dimension: {:s}.{:s}'.format(group, dimension))
-        reload(controllers)
-        return controllers.ExploreDataset(
-            group = group, 
-            dimension = dimension
+    @app.route('/api/timeseries/<groupID>/<dimID>')
+    def explore_dimension(groupID, dimID):
+        logging.info('explore dimID: {:s}.{:s}'.format(groupID, dimID))
+        #reload(controllers)
+        return controllers.ExploreTSDim(
+            groupID = groupID, 
+            dimID = dimID
         ).handle()
 
-    @app.route('/api/timeseries/<group>/<dimension>/<tsID>')
-    def column_exploration(group, dimension, tsID):
-        logging.info('explore timeseries: {:s}.{:s}.{:s}'.format(group, dimension, tsID))
-        reload(controllers)
-        return controllers.ExploreColumn(
-            group = group, 
-            dimension = dimension, 
+    @app.route('/api/timeseries/<groupID>/<dimID>/<tsID>')
+    def explore_timeseries(groupID, dimID, tsID):
+        logging.info('explore timeseries: {:s}.{:s}.{:s}'.format(groupID, dimID, tsID))
+        #reload(controllers)
+        return controllers.ExploreTS(
+            groupID = groupID, 
+            dimID = dimID, 
             tsID = tsID
         ).handle()
 

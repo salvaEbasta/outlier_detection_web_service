@@ -28,9 +28,14 @@ re.match(f2.format(".+"), "prova.f2.f1")
 import numpy as np
 import pandas as pd
 df = pd.DataFrame({'p1': [np.nan, 2, np.nan, 1, 3, 3], 'p2': [np.nan, 3 ,4, np.nan, 4, 4]})
-df1 = pd.DataFrame({'p1': [np.nan, 2, np.nan, 1, 3, 3], 'p2': [np.nan, 3 ,4, np.nan, 4, 4]})
-for _, r in df1.iterrows():
-    df.loc[len(df)] = r
-df
+df.astype("string").to_dict()
+# %%
+import numpy as np
+import pandas as pd
+df = pd.DataFrame({"d": ["2014-01-02", "2015-01-02"]})
+df["d"] = pd.to_datetime(df["d"])
+df["p"] = [np.nan]*len(df)
+df["v"] = [1.2]*len(df)
+#df = df.fillna(None).astype("string")
 
 # %%

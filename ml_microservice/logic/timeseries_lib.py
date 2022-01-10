@@ -7,6 +7,15 @@ import pandas as pd
 
 from ml_microservice import configuration as cfg
 
+def compose_ts(values, dates):
+    tmp = {}
+    tmp[cfg.timeseries.value_column] = values
+    if dates is None:
+        dates= [pd.to_datetime("today").normalize()]*len(values)
+    tmp[cfg.timeseries.date_column] = dates
+    ts = pd.DataFrame(tmp)
+    return ts
+
 class TimeseriesLibrary:
     def __init__(self, 
         path = cfg.timeseries.path, 

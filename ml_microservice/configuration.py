@@ -31,7 +31,7 @@ xml = Namespace(
 )
 # Metadata ---------------------------------------------
 metadata = Namespace(
-    file = "metadata.json",
+    default_file = "metadata.json",
 )
 metadataKs = Namespace(
     status = "status",
@@ -45,6 +45,7 @@ metadataKs = Namespace(
     train_trainIDX = "last_train_IDX",
     train_devIDX = "last_dev_IDX",
     train_time = "total_time_(s)",
+    train_bestConfig = "best_config",
 )
 
 # Detector defaults -------------------------------------
@@ -77,15 +78,20 @@ detectLib = Namespace(
     version_format = "v{:d}",
 )
 
+env = Namespace(
+    assets_dir = "assets",
+    temp_dir = "temp"
+)
+
 # Factory -------------------------------------------------
 factory = Namespace(
     tuner_k = "tuner",
     loader_k = "loader",
+    eval_k = "evaluator",
 )
 
 # Trainer defaults ----------------------------------------
 trainer = Namespace(
-    assets_dir = "assets",
 )
 
 detectorTrainer = Namespace(
@@ -98,10 +104,22 @@ timeseries = Namespace(
     path = os.path.join("data", "timeseries"),
     date_column = "Date",
     value_column = "Value",
+    nan_str = "null",
 )
 
 # Filter --------------------------------------------------
 seriesFilter = Namespace(
     min_d_points = 30,
     patience = 10,
+)
+
+# Evaluator ----------------------------------------------
+evaluator = Namespace(
+    history_file = "history.csv",
+    date_column = "Date",
+)
+
+# Tuner --------------------------------------------------
+tuner = Namespace(
+    results_file = "explored_config.json"
 )

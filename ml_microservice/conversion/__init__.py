@@ -67,12 +67,12 @@ class RowAggregator():
 class Xml2Csv():
     def __init__(self, 
         default_unnamed = UNNAMED, 
-        ignore_list: list = IGNORES, 
+        ignore_patterns: list = IGNORES, 
         id_patterns: list = IDS,
     ):
-        self._ignore_list = ignore_list if len(ignore_list) else IGNORES
-        self._ids = id_patterns if len(ignore_list) else IDS
-        logging.debug(f"ids: {self._ids}, ignores: {self._ignore_list}")
+        self._ignores = ignore_patterns if len(ignore_patterns) else IGNORES
+        self._ids = id_patterns if len(ignore_patterns) else IDS
+        logging.debug(f"ids: {self._ids}, ignores: {self._ignores}")
 
         self._default_unamed = default_unnamed
         self._t_start = 0
@@ -83,7 +83,7 @@ class Xml2Csv():
         values = {}
         for field in row:
             if any([re.match(pattern, field.get("name")) != None
-                        for pattern in self._ignore_list]):
+                        for pattern in self._ignores]):
                 continue
             if rid is None and any([re.match(pattern, field.get("name")) != None
                         for pattern in self._ids]):
@@ -102,7 +102,7 @@ class Xml2Csv():
 
     def parse(self, xml: str):
         """ -> dict: {id: pd.Dataframe, } """
-        logging.info(f'[.] xml2csv: id: {self._ids}, ignore: {self._ignore_list}')
+        logging.info(f'[.] xml2csv: id: {self._ids}, ignore: {self._ignores}')
         self._t_start = time.time()
         self._t_end = time.time()
 

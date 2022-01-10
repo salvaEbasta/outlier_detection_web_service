@@ -26,7 +26,7 @@ def split(dataframe, dev=True, window_size=0):
         return dataframe[:int(n*.7)], \
             dataframe[int(n*.7) - window_size:]
 
-class TSPreprocessor():
+class Preprocessor():
     def __init__(self, 
         ts: pd.DataFrame,
         value_col = cfg.timeseries.value_column,
@@ -46,12 +46,18 @@ class TSPreprocessor():
         else:
             ts[self._valC] = ts[self._valC].fillna(0.0)
         return ts
+    
+    def split(self, ts):
+        pass
 
     def extract_windows(self, ts, w):
         pass
 
+    def for_prediction(self):
+        pass
 
-class Preprocessor():
+
+class OldPreprocessor():
     """Class to preprocess datasets that contains a sequence.
         The set must be already partitioned
     """

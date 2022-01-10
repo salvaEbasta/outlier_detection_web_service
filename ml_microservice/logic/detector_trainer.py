@@ -78,7 +78,7 @@ class DetectorTrainer():
         self.logger.info("[.] Composing preprocessor")
         window_size = cfg.detectorDefaults.win_size
         train, dev, test = preprocessing.split(serie, window_size=window_size)
-        preprocessor = preprocessing.Preprocessor(
+        preprocessor = preprocessing.OldPreprocessor(
             train=train,
             dev=dev,
             test=test,
@@ -255,7 +255,7 @@ class DetectorTrainer():
         
         # Preprocessing
         self.logger.info("[.] Preprocessor init")
-        preproc = preprocessing.Preprocessor(train = data)
+        preproc = preprocessing.OldPreprocessor(train = data)
         preproc.load_params(os.path.join(self._env, cfg.files.preprocessing_params))
         X, y = preproc.train
         
