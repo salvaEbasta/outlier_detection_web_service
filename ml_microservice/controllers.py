@@ -1,10 +1,14 @@
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import logging
 
 from ml_microservice.logic.facade import LogicFacade
 from ml_microservice import configuration as cfg
 
 class Controller():
+    def handle(self, *args, **kwargs) -> Tuple[Dict, int]:
+        raise NotImplementedError()
+
+class AbstractController(Controller):
     def __init__(self, lvl = logging.DEBUG):
         log_id = str(self.__class__.__name__).lower()
         self.logger = logging.getLogger(log_id)
@@ -23,7 +27,7 @@ class Controller():
     def _handle(self, *args, **kwargs):
         raise NotImplementedError()
 
-class ConvertXML(Controller):
+class ConvertXML(AbstractController):
     def __init__(self, request):
         super().__init__()
         self.request = request
@@ -122,7 +126,7 @@ class ConvertXML(Controller):
                 'description': str(e),
             }, 400
 
-class ListTimeseries(Controller):
+class ListTimeseries(AbstractController):
     def __init__(self):
         super().__init__()
 
@@ -141,7 +145,7 @@ class ListTimeseries(Controller):
             'timeseries': LogicFacade.list_ts(),
         }, 200
 
-class ExploreTSDim(Controller):
+class ExploreTSDim(AbstractController):
     def __init__(self, group, dimension):
         super().__init__()
         self.group = group
@@ -185,7 +189,7 @@ class ExploreTSDim(Controller):
                 'description': str(ve),
             }, 404
 
-class ExploreTS(Controller):
+class ExploreTS(AbstractController):
     def __init__(self, group, dimension, tsID):
         super().__init__()
         self.group = group
@@ -220,7 +224,7 @@ class ExploreTS(Controller):
                 'description': str(ve),
             }, 404
 
-class ListMethods(Controller):
+class ListMethods(AbstractController):
     def __init__(self):
         super().__init__()
 
@@ -236,7 +240,7 @@ class ListMethods(Controller):
             'methods': LogicFacade().list_methods(),
         }, 200
 
-class ListSavedDetectors(Controller):
+class ListSavedDetectors(AbstractController):
     def __init__(self):
         super().__init__()
 
@@ -255,7 +259,7 @@ class ListSavedDetectors(Controller):
             'saved': LogicFacade().list_save_detectors(),
         }, 200
 
-class DetectorTrain(Controller):
+class DetectorTrain(AbstractController):
     def __init__(self, request):
         super().__init__()
         self.logger.info(f"Request: {request.get_json()}")
@@ -382,7 +386,7 @@ class DetectorTrain(Controller):
                 'description': str(e),
             }, 400
 
-class DetectorMetadata(Controller):
+class DetectorMetadata(AbstractController):
     def __init__(self, mID, version):
         self.mID = mID
         self.version = version
@@ -431,7 +435,7 @@ class DetectorMetadata(Controller):
                 "description": str(e)
             }, 404
 
-class ShowDetectorHistory(Controller):
+class ShowDetectorHistory(AbstractController):
     def __init__(self, mID, version):
         self.mID = mID
         self.version = version
@@ -473,7 +477,7 @@ class ShowDetectorHistory(Controller):
                 "description": str(e)
             }, 404
 
-class DetectorParameters(Controller):
+class DetectorParameters(AbstractController):
     def __init__(self, mID, version):
         self.mID = mID
         self.version = version
@@ -508,7 +512,7 @@ class DetectorParameters(Controller):
                 "description": str(e)
             }, 404
 
-class DetectPredict(Controller):
+class DetectPredict(AbstractController):
     def __init__(self, mID, version, request):
         super().__init__()
         self.logger.info("{}-{}: Request: {}".format(mID, version, request.get_json()))
@@ -605,7 +609,7 @@ class DetectPredict(Controller):
         except Exception as e:
             self.logger.warning(str(e))
 
-class DetectorEvaluate(Controller):
+class DetectorEvaluate(AbstractController):
     def __init__(self, mID, version):
         super().__init__()
         self.logger.info("{}-{}".format(mID, version))
