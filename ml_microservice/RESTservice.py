@@ -82,7 +82,7 @@ def build_app():
         return controllers.DetectorParameters(mID, version).handle()
 
     # Xml
-    @app.route('/api/conversion/xml', methods=['POST'])
+    @app.route('/api/timeseries', methods=['POST'])
     def dump_xml():
         logging.info('Convert xml')
         #reload(controllers)

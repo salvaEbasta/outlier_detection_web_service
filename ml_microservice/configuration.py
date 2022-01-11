@@ -104,6 +104,7 @@ timeseries = Namespace(
     path = os.path.join("data", "timeseries"),
     date_column = "Date",
     value_column = "Value",
+    anom_column = "Outlier",
     nan_str = "null",
 )
 

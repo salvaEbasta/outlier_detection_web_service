@@ -8,6 +8,10 @@ class Controller():
     def handle(self, *args, **kwargs) -> Tuple[Dict, int]:
         raise NotImplementedError()
 
+class RequestHandler():
+    def unpack(self, payload):
+        raise NotImplementedError()
+
 class AbstractController(Controller):
     def __init__(self, lvl = logging.DEBUG):
         log_id = str(self.__class__.__name__).lower()
@@ -27,14 +31,14 @@ class AbstractController(Controller):
     def _handle(self, *args, **kwargs):
         raise NotImplementedError()
 
-class ConvertXML(AbstractController):
+class ConvertXML(AbstractController, RequestHandler):
     def __init__(self, request):
         super().__init__()
         self.request = request
         self.logger.debug(f"{request.get_json()}")
         self.payload = request.get_json()
 
-    def _unpack(self, payload):
+    def unpack(self, payload):
         """
         payload: {
             "xml": str,
@@ -87,7 +91,7 @@ class ConvertXML(AbstractController):
         }
         """
         try:
-            self._unpack(self.payload)
+            self.unpack(self.payload)
             dfs = LogicFacade().convert_xml(
                 id_patterns=self.id_patterns,
                 ignore_patterns=self.ignore_patterns,
@@ -259,7 +263,7 @@ class ListSavedDetectors(AbstractController):
             'saved': LogicFacade().list_save_detectors(),
         }, 200
 
-class DetectorTrain(AbstractController):
+class DetectorTrain(AbstractController, RequestHandler):
     def __init__(self, request):
         super().__init__()
         self.logger.info(f"Request: {request.get_json()}")
@@ -267,7 +271,7 @@ class DetectorTrain(AbstractController):
         self.payload = request.get_json()
         self.logger.debug("End __init__")
 
-    def _unpack(self, payload):
+    def unpack(self, payload):
         """
         {
             "train": {
@@ -341,7 +345,7 @@ class DetectorTrain(AbstractController):
         """
         self.logger.debug("Start _handle")
         try:
-            self._unpack(self.payload)
+            self.unpack(self.payload)
             self.logger.debug("done unpacking")
             result = LogicFacade().detector_train(
                 mID=self.mID,
@@ -512,7 +516,7 @@ class DetectorParameters(AbstractController):
                 "description": str(e)
             }, 404
 
-class DetectPredict(AbstractController):
+class DetectPredict(AbstractController, RequestHandler):
     def __init__(self, mID, version, request):
         super().__init__()
         self.logger.info("{}-{}: Request: {}".format(mID, version, request.get_json()))
@@ -522,7 +526,7 @@ class DetectPredict(AbstractController):
         self.payload = request.get_json()
         self.logger.debug("End __init__")
     
-    def _unpack(self, payload):
+    def unpack(self, payload):
         """
         {
             "data": {
@@ -572,7 +576,7 @@ class DetectPredict(AbstractController):
         """
         try:
             self.logger.debug("Start _handle")
-            self._unpack(self.payload)
+            self.unpack(self.payload)
             tmp = LogicFacade().detector_predict(
                 mID=self.mID,
                 version=self.version,
@@ -609,7 +613,7 @@ class DetectPredict(AbstractController):
         except Exception as e:
             self.logger.warning(str(e))
 
-class DetectorEvaluate(AbstractController):
+class DetectorEvaluate(AbstractController, RequestHandler):
     def __init__(self, mID, version):
         super().__init__()
         self.logger.info("{}-{}".format(mID, version))
@@ -623,7 +627,7 @@ class DetectorEvaluate(AbstractController):
         self.payload = r.get_json()
         return self
 
-    def _unpack(self, payload):
+    def unpack(self, payload):
         """
         {
             "forget": bool,
@@ -656,7 +660,8 @@ class DetectorEvaluate(AbstractController):
         }
         """
         try:
-            tmp = LogicFacade().detector_eval(self.mID, self.version)
+            self.unpack(self.payload)
+            tmp = LogicFacade().detector_eval(self.mID, self.version, self.forget)
             resp = {
                 'code': 200,
                 "mID": self.mID,

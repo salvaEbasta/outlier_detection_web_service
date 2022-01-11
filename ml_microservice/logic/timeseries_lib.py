@@ -21,12 +21,14 @@ class TimeseriesLibrary:
         path = cfg.timeseries.path, 
         date_col = cfg.timeseries.date_column,
         value_col = cfg.timeseries.value_column,
+        anom_col = cfg.timeseries.anom_column,
     ):
         self.logger = logging.getLogger('tsLib')
         self.logger.setLevel(logging.DEBUG)
         self.storage = path
         self.date_col = date_col
         self.value_col = value_col
+        self.anom_col = anom_col
 
     @property
     def timeseries(self):
@@ -81,6 +83,7 @@ class TimeseriesLibrary:
         ts = pd.DataFrame()
         ts[self.date_col] = df[self.date_col]
         ts[self.value_col] = df[tsID]
+        ts[self.anom_col] = df[self.anom_col] if self.anom_col in df.columns else ""
         return ts
 
     def has_group(self, group: str):
