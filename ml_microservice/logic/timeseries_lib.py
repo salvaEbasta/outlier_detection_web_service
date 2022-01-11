@@ -5,23 +5,23 @@ import re
 import numpy as np
 import pandas as pd
 
-from ml_microservice import configuration as cfg
+from ml_microservice import configuration as old_cfg
 
 def compose_ts(values, dates):
     tmp = {}
-    tmp[cfg.timeseries.value_column] = values
+    tmp[old_cfg.timeseries.value_column] = values
     if dates is None:
         dates= [pd.to_datetime("today").normalize()]*len(values)
-    tmp[cfg.timeseries.date_column] = dates
+    tmp[old_cfg.timeseries.date_column] = dates
     ts = pd.DataFrame(tmp)
     return ts
 
 class TimeseriesLibrary:
     def __init__(self, 
-        path = cfg.timeseries.path, 
-        date_col = cfg.timeseries.date_column,
-        value_col = cfg.timeseries.value_column,
-        anom_col = cfg.timeseries.anom_column,
+        path = old_cfg.timeseries.path, 
+        date_col = old_cfg.timeseries.date_column,
+        value_col = old_cfg.timeseries.value_column,
+        anom_col = old_cfg.timeseries.anom_column,
     ):
         self.logger = logging.getLogger('tsLib')
         self.logger.setLevel(logging.DEBUG)

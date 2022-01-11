@@ -37,5 +37,11 @@ df["d"] = pd.to_datetime(df["d"])
 df["p"] = [np.nan]*len(df)
 df["v"] = [1.2]*len(df)
 #df = df.fillna(None).astype("string")
-
+# %%
+class P:
+    @staticmethod
+    def prova():
+        print("p")
+p = P()
+p.prova()
 # %%

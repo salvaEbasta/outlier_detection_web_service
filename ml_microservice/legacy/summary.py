@@ -2,7 +2,7 @@ from datetime import datetime
 import json
 import os
 
-from ml_microservice import configuration as cfg
+from ml_microservice import configuration as old_cfg
 
 STATUS = dict(active='active', training='under_training')
 
@@ -44,7 +44,7 @@ class Summary():
         return self._status == STATUS["active"]
 
     def save(self, ddir):
-        f = os.path.join(ddir, cfg.files.detector_summary)
+        f = os.path.join(ddir, old_cfg.files.detector_summary)
         with open(f, 'w') as f:
             json.dump(self.values, f)
 

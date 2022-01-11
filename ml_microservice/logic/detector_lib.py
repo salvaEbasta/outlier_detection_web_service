@@ -2,13 +2,13 @@ import logging
 import os
 from typing import Tuple
 
-from ml_microservice import configuration as cfg
+from ml_microservice import configuration as old_cfg
 from ml_microservice.logic import metadata
 
 class Environment():
     def __init__(self, root_path, 
-        assets_dir = cfg.env.assets_dir, 
-        temp_dir = cfg.env.temp_dir
+        assets_dir = old_cfg.env.assets_dir, 
+        temp_dir = old_cfg.env.temp_dir
     ):
         self.path = root_path
         self.assets_dir = assets_dir
@@ -40,7 +40,7 @@ class Environment():
         shutil.rmtree(self.temp)
 
 class AnomalyDetectorsLibrary():
-    def __init__(self, storage = cfg.detectLib.path):
+    def __init__(self, storage = old_cfg.detectLib.path):
         self.logger = logging.getLogger('detectLib')
         self.logger.setLevel(logging.INFO)
         self.storage = storage
@@ -82,7 +82,7 @@ class AnomalyDetectorsLibrary():
         v_num = 0
         if self.has(mID):
             v_num = len(self.versions(mID))
-        v = cfg.detectLib.version_format.format(v_num)
+        v = old_cfg.detectLib.version_format.format(v_num)
         env_ = Environment(self._2storage_path(mID, v))
         env_.compose()
         m = metadata.Metadata().save(env_.root)

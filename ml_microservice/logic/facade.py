@@ -8,12 +8,12 @@ from ml_microservice.logic import timeseries_lib
 from ml_microservice.logic.timeseries_lib import TimeseriesLibrary
 from ml_microservice.logic.detector_lib import AnomalyDetectorsLibrary
 
+from ml_microservice.anomaly_detection import configuration as cfg
 from ml_microservice.anomaly_detection.factory import Factory
-from ml_microservice.anomaly_detection.loaders import Loader
-from ml_microservice.anomaly_detection.preprocessing import Preprocessor
-from ml_microservice.anomaly_detection.tuners import Tuner
+from ml_microservice.anomaly_detection.transformers import Preprocessor
 from ml_microservice.anomaly_detection import evaluators
-from ml_microservice.anomaly_detection.evaluators import Evaluator
+from ml_microservice.anomaly_detection.evaluators import GPEvaluator
+
 
 class LogicFacade():
     def __init__(self):
@@ -98,8 +98,7 @@ class LogicFacade():
         return model.get_params()
 
 
-    def detector_train(self, mID, groupID, dimID, tsID, 
-                        method):
+    def detector_train(self, mID, groupID, dimID, tsID, method):
         ts_lib = TimeseriesLibrary()
         if not ts_lib.has(groupID, dimID):
             raise ValueError("Timeseries (\'{:s}\', \'{:s}\') not found".format(groupID, dimID))
@@ -124,10 +123,10 @@ class LogicFacade():
         t0 = time.time()
         train_time = 0
         preproc = Preprocessor(ts)
-        tuner.tune(preproc)
+        preproc.train_test_split()
+        tuner.tune(preproc.train)
 
         last_train_IDX = preproc.last_train_IDX_
-        last_dev_IDX = getattr(preproc, "last_dev_IDX_", last_train_IDX)
         train_time = time.time() - t0
         
         model = tuner.best_model_
@@ -135,15 +134,13 @@ class LogicFacade():
         tuner.save_results(env.root)
         meta.set_training_info(
             last_train_IDX = last_train_IDX,
-            last_dev_IDX = last_train_IDX,
             total_time = train_time,
             best_config = tuner.best_config_
         )
         meta.save(env.root)
         return dict(version=v0, train_time=train_time,
                         last_train_IDX=last_train_IDX,
-                        last_dev_IDX=last_dev_IDX,
-                        best_config=tuner.best_model_)
+                        best_config=tuner.best_config_)
 
 
     def detector_predict(self, mID, version, values, dates):
@@ -160,11 +157,9 @@ class LogicFacade():
         
         t0 = time.time()
         model = loader.load(env.assets)
-        preproc = Preprocessor(ts)
-        preproc.for_prediction()
-        y_hat = model.predict(preproc.values)
-
+        y_hat = model.predict(ts)
         prediction_time = time.time() - t0
+
         self.logger.debug("Done detction")
         res = dict(
             y_hat=y_hat, 
@@ -187,49 +182,49 @@ class LogicFacade():
         if not meta.is_training_done():
             raise ValueError('The anomaly detector @{:s}.{:s} is currently not available'.format(mID, version))
         
-        factory = Factory()
-        evaluator = factory.get_evaluator(meta.model_type)
         ts_lib = TimeseriesLibrary()
         
         groupID, dimID, tsID = meta.get_ts()
         ts = ts_lib.fetch_ts(groupID, dimID, tsID)
 
+        factory = Factory()
+        evaluator = GPEvaluator(env)
+        loader = factory.get_loader(meta.model_type)
+        
         t0 = time.time()
-        evaluator.load_model(env.assets)
 
-        preproc = Preprocessor(ts, start_from = meta.last_dev_IDX)
-        scores = evaluator.evaluate(preproc, forget)
-
-        if hasattr(evaluator, "forecast_"):
-            self.forecast_ = getattr(evaluator, "forecast_")
-        if hasattr(evaluator, "predict_prob_"):
-            self.predict_prob_ = getattr(evaluator, "predict_prob_")
+        model = loader.load(env.assets)
+        preproc = Preprocessor(ts, start_from = meta.last_train_IDX + 1)
+        scores = evaluator.evaluate(model, preproc.ts)
         eval_time = time.time() - t0
-        y_hat = evaluator.prediction_
 
-        if not forget and evaluator.is_performance_dropping():
-            evaluator.save_results(env.root)
-            t = Thread(
-                target = self.detector_train, 
-                args = (
-                    mID,
-                    groupID,
-                    dimID,
-                    tsID,
-                    meta.model_type(),
+        if not forget:
+            self.logger.debug("Don't forget scores")
+            evaluator.keep_last_scores()
+            if evaluator.is_performance_dropping():
+                self.logger.info("Found performance drop, retraining")
+                evaluator.save_results(env.root)
+                t = Thread(
+                    target = self.detector_train, 
+                    args = (
+                        mID,
+                        groupID,
+                        dimID,
+                        tsID,
+                        meta.model_type(),
+                    )
                 )
-            )
-            t.start()
+                t.start()
         self.logger.debug("Done detction")
 
         resp = dict(
-            values=preproc.values,
-            y_hat = y_hat,
+            values = preproc.ts[cfg.timeseries["X"]],
+            prediction = evaluator.prediction_,
             eval_time = eval_time,
             scores = scores
         )
-        if preproc.dates is not None:
-            resp["dates"] = preproc.dates
+        if cfg.timeseries["timestamp"] in preproc.ts.columns:
+            resp["dates"] = preproc.ts[cfg.timeseries["timestamp"]]
         if hasattr(evaluator, "forecast_"):
             resp["forecast"] = evaluator.forecast_
         if hasattr(evaluator, "predict_prob_"):

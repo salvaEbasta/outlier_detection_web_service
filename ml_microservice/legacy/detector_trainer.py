@@ -5,15 +5,15 @@ import time
 
 import numpy as np
 
-from ml_microservice import configuration as cfg
+from ml_microservice import configuration as old_cfg
 from ml_microservice.logic.timeseries_lib import TimeseriesLibrary
 from ml_microservice.legacy.summary import Summary, STATUS
 from ml_microservice.anomaly_detection import preprocessing, model_factory, detector
 
 class DetectorTrainer():
     def __init__(self, 
-                    storage_path=cfg.detectorTrainer.path,
-                    retrain_window=cfg.detectorTrainer.retrain_patience,
+                    storage_path=old_cfg.detectorTrainer.path,
+                    retrain_window=old_cfg.detectorTrainer.retrain_patience,
                 ):
         self.logger = logging.getLogger('trainer')
         self.logger.setLevel(logging.DEBUG)
@@ -22,8 +22,8 @@ class DetectorTrainer():
         self.storage = storage_path
         self.retrain_window = retrain_window
 
-        self.version_format = cfg.formats.version
-        self.detector_summary_file = cfg.files.detector_summary
+        self.version_format = old_cfg.formats.version
+        self.detector_summary_file = old_cfg.files.detector_summary
 
         self._detector = None
 
@@ -76,7 +76,7 @@ class DetectorTrainer():
 
         # Preprocessing
         self.logger.info("[.] Composing preprocessor")
-        window_size = cfg.detectorDefaults.win_size
+        window_size = old_cfg.detectorDefaults.win_size
         train, dev, test = preprocessing.split(serie, window_size=window_size)
         preprocessor = preprocessing.OldPreprocessor(
             train=train,
@@ -101,16 +101,16 @@ class DetectorTrainer():
         self.logger.info("[*] Training")
         self._detector = detector.Detector(
             window_size=window_size,
-            l=cfg.detectorDefaults.lambda_,
-            k=cfg.detectorDefaults.k,
+            l=old_cfg.detectorDefaults.lambda_,
+            k=old_cfg.detectorDefaults.k,
             forecasting_model=forecasting_model,
         )
         tStart = time.time()
         _, _, epochs, history = self._detector.fit(
                                 *preprocessor.augmented_train, 
                                 dev_data=preprocessor.dev,
-                                max_epochs=cfg.detectorDefaults.max_epochs,
-                                patience=cfg.detectorDefaults.early_stopping_patience,
+                                max_epochs=old_cfg.detectorDefaults.max_epochs,
+                                patience=old_cfg.detectorDefaults.early_stopping_patience,
                             )
         tDelta = time.time() - tStart
 
@@ -189,12 +189,12 @@ class DetectorTrainer():
             vs = []
             for d in [f for f in os.listdir(env)
                         if os.path.isdir(os.path.join(env, f)) and 
-                            cfg.files.detector_summary in os.listdir(os.path.join(env, f))]:
+                            old_cfg.files.detector_summary in os.listdir(os.path.join(env, f))]:
                 s = Summary()
-                s.load(os.path.join(os.path.join(env, d), cfg.files.detector_summary))
+                s.load(os.path.join(os.path.join(env, d), old_cfg.files.detector_summary))
                 if s.is_active():
                     h = detector.History()
-                    h.load(os.path.join(os.path.join(env, d), cfg.files.detector_history))
+                    h.load(os.path.join(os.path.join(env, d), old_cfg.files.detector_history))
                     vs.append( (d, h.naive_score[-1]) )
             if len(vs) == 0:
                 self.logger.warning('No available model for identifier \'{:s}\''.format(identifier))
@@ -207,7 +207,7 @@ class DetectorTrainer():
         self.logger.info("Attempt to load detector {:s}.{:s}".format(identifier, version))
         self.retrieve_env(identifier, version)
         self._summary = Summary()
-        self._summary.load(os.path.join(self._env, cfg.files.detector_summary))
+        self._summary.load(os.path.join(self._env, old_cfg.files.detector_summary))
         self._detector = None
         if self._summary.is_active():
             self._detector = detector.Detector(path=self._env)
@@ -256,7 +256,7 @@ class DetectorTrainer():
         # Preprocessing
         self.logger.info("[.] Preprocessor init")
         preproc = preprocessing.OldPreprocessor(train = data)
-        preproc.load_params(os.path.join(self._env, cfg.files.preprocessing_params))
+        preproc.load_params(os.path.join(self._env, old_cfg.files.preprocessing_params))
         X, y = preproc.train
         
         # Detection

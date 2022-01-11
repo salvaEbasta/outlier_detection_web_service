@@ -2,7 +2,7 @@ from typing import Dict, List, Tuple
 import logging
 
 from ml_microservice.logic.facade import LogicFacade
-from ml_microservice import configuration as cfg
+from ml_microservice import configuration as old_cfg
 
 class Controller():
     def handle(self, *args, **kwargs) -> Tuple[Dict, int]:
@@ -100,12 +100,12 @@ class ConvertXML(AbstractController, RequestHandler):
                 override=self.override,
                 groupID=self.group
             )
-            dC = cfg.timeseries.date_column
+            dC = old_cfg.timeseries.date_column
             tmp = {}
             for dfID, df in dfs.items():
                 if dC in df.columns:
                     df[dC] = df[dC].astype("string")
-                tmp[dfID] = {c: df[c].fillna(cfg.timeseries.nan_str).to_list() 
+                tmp[dfID] = {c: df[c].fillna(old_cfg.timeseries.nan_str).to_list() 
                                 for c in df.columns}
             resp = {
                 'code': 200,
@@ -174,7 +174,7 @@ class ExploreTSDim(AbstractController):
                 self.group,
                 self.dimension
             )
-            df = df.drop(cfg.timeseries.date_column, axis = 1)
+            df = df.drop(old_cfg.timeseries.date_column, axis = 1)
             return {
                 'code': 200,
                 'group': {
@@ -214,12 +214,12 @@ class ExploreTS(AbstractController):
                 self.dimension,
                 self.tsID
             )
-            if self.tsID == cfg.timeseries.date_column:
+            if self.tsID == old_cfg.timeseries.date_column:
                 vs = vs.astype("string")
             return {
                 'code': 200,
                 'tsID': self.tsID,
-                'values': vs.fillna(cfg.timeseries.nan_str).to_dict()
+                'values': vs.fillna(old_cfg.timeseries.nan_str).to_dict()
             }, 200
         except ValueError as ve:
             return {
@@ -331,7 +331,6 @@ class DetectorTrain(AbstractController, RequestHandler):
                     "total_time(s)": float,
                     "best_config": dict,
                     "last_train_IDX": int,
-                    "last_dev_IDX": int,
                 }
             },
             "method": {
@@ -369,7 +368,6 @@ class DetectorTrain(AbstractController, RequestHandler):
                     "overview": {
                         "total_time(s)": result["train_time"],
                         "last_train_IDX": result["last_train_IDX"],
-                        "last_dev_IDX": result["last_dev_IDX"],
                         "best_config": result["best_config"]
                     }
                 },
@@ -458,8 +456,8 @@ class ShowDetectorHistory(AbstractController):
         try:
             history = LogicFacade().detector_history(self.mID, self.version)
             for c in history.columns:
-                history[c] = history[c].fillna(cfg.timeseries.nan_str)
-                if c == cfg.evaluator.date_column:
+                history[c] = history[c].fillna(old_cfg.timeseries.nan_str)
+                if c == old_cfg.evaluator.date_column:
                     history[c] = history[c].astype("string")
             return {
                 'code': 200,
@@ -670,7 +668,7 @@ class DetectorEvaluate(AbstractController, RequestHandler):
                     "values": tmp["values"],
                 },
                 'evaluation': {
-                    "anomaly_class": tmp["y_hat"],
+                    "anomaly_class": tmp["prediction"],
                     "total_time(s)": tmp["eval_time"],
                     "scores": tmp["scores"],
                 }

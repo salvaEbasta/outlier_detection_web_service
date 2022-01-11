@@ -1,6 +1,8 @@
 from argparse import Namespace
 import os
 
+from ml_microservice.anomaly_detection import configuration as cfg
+
 # Files ------------------------------------------
 files = Namespace(
     detector_summary = 'summary.json',
@@ -43,27 +45,11 @@ metadataKs = Namespace(
     ts_tsID = "tsID",
     train = "training",
     train_trainIDX = "last_train_IDX",
-    train_devIDX = "last_dev_IDX",
     train_time = "total_time_(s)",
     train_bestConfig = "best_config",
 )
 
 # Detector defaults -------------------------------------
-anomDetect = Namespace(
-    file_name = "model",
-    file_ext = "{:s}.joblib",
-)
-
-windGauss = Namespace(
-    file_ext = anomDetect.file_ext.format("{:s}.wingauss"),
-)
-windGauss.default_file = windGauss.file_ext.format("wg")
-
-empRule = Namespace(
-    file_ext = anomDetect.file_ext.format("{:s}.emprule"),
-)
-empRule.default_file = empRule.file_ext.format("er")
-
 detectorDefaults = Namespace(
     max_epochs = 10,
     win_size = 26,
@@ -83,17 +69,7 @@ env = Namespace(
     temp_dir = "temp"
 )
 
-# Factory -------------------------------------------------
-factory = Namespace(
-    tuner_k = "tuner",
-    loader_k = "loader",
-    eval_k = "evaluator",
-)
-
 # Trainer defaults ----------------------------------------
-trainer = Namespace(
-)
-
 detectorTrainer = Namespace(
     path = os.path.join("data", "saved"),
     retrain_patience = 5,
@@ -102,9 +78,9 @@ detectorTrainer = Namespace(
 # Timeseries ----------------------------------------------
 timeseries = Namespace(
     path = os.path.join("data", "timeseries"),
-    date_column = "Date",
-    value_column = "Value",
-    anom_column = "Outlier",
+    date_column = cfg.cols["timestamp"],
+    value_column = cfg.cols["X"],
+    anom_column = cfg.cols["y"],
     nan_str = "null",
 )
 
@@ -112,15 +88,4 @@ timeseries = Namespace(
 seriesFilter = Namespace(
     min_d_points = 30,
     patience = 10,
-)
-
-# Evaluator ----------------------------------------------
-evaluator = Namespace(
-    history_file = "history.csv",
-    date_column = "Date",
-)
-
-# Tuner --------------------------------------------------
-tuner = Namespace(
-    results_file = "explored_config.json"
 )

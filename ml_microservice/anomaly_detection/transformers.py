@@ -5,54 +5,93 @@ import logging
 import numpy as np
 import pandas as pd
 
-from ml_microservice import configuration as cfg
+from ml_microservice import configuration as old_cfg
+from . import configuration as cfg
 
-def split(dataframe, dev=True, window_size=0):
-    """
-        dataframe -> train, dev, test (porzione, no X o y)\n
-        if window_size is specified, dev and test will overlap the previous set.
-    """
-    if window_size < 0:
-        raise ValueError('Window size has to be a value greater than 0')
-    elif window_size > len(dataframe):
-        raise ValueError(f'Window size ({window_size}) exceed dataframe length ({len(dataframe)})')
+class Transformer:
+    def fit(self, ts):
+        raise NotImplementedError()
     
-    n = len(dataframe)
-    if dev:
-        return dataframe[:int(n*.5)], \
-            dataframe[int(n*.5) - window_size:int(n*.7)], \
-            dataframe[int(n*.7) - window_size:]
-    else:
-        return dataframe[:int(n*.7)], \
-            dataframe[int(n*.7) - window_size:]
+    def transform(self, ts):
+        raise NotImplementedError()
 
 class Preprocessor():
     def __init__(self, 
         ts: pd.DataFrame,
-        value_col = cfg.timeseries.value_column,
-        date_col = cfg.timeseries.date_column
+        start_from = 0,
+        value_col = cfg.cols["X"],
+        date_col = cfg.cols["timestamp"],
+        nan_ratio = cfg.preprocessor["good_nan_ratio"]
     ):
         self._valC = value_col
         self._dateC = date_col
-        self.ts = ts
+        self.nan_ratio = nan_ratio
+
+        self.startIDX = start_from
+        self.ts = ts[self.startIDX:]
     
     def fill_nan(self, ts):
         nan_num = ts[self._valC].isnull().sum()
-        if nan_num / len(ts) <= 0.15:
-            ts[self._valC] = ts[self._valC].interpolate(
-                method = "polynomial", 
-                order = 4
-            ).fillna("bfill")
+        if nan_num / len(ts) <= self.nan_ratio:
+            ts[self._valC] = ts[self._valC].fillna(method = "ffill").fillna(method = "bfill")
         else:
             ts[self._valC] = ts[self._valC].fillna(0.0)
         return ts
     
-    def split(self, ts):
-        pass
+    def train_test_split(self, ts, train_ratio = 0.7):
+        self.last_train_IDX_ = int(train_ratio * len(ts)) - 1
+        self.train = pd.DataFrame(
+            ts[ : int(train_ratio * len(ts))]
+        )
+        self.test = pd.DataFrame(
+            ts[int(train_ratio * len(ts)) : ]
+        )
 
-    def extract_windows(self, ts, w):
-        pass
+    def train_dev_test_split(self, ts, train_ratio = 0.5, dev_ratio = 0.2):
+        self.last_train_IDX_ = int(train_ratio * len(ts)) - 1
+        self.train = pd.DataFrame(
+            ts[ : int(train_ratio * len(ts))]
+        )
+        self.last_dev_IDX_ = int((train_ratio + dev_ratio) * len(ts)) - 1
+        self.dev = pd.DataFrame(
+            ts[int(train_ratio * len(ts)) : int((train_ratio + dev_ratio) * len(ts))]
+        )
+        self.test = pd.DataFrame(
+            ts[int((train_ratio + dev_ratio) * len(ts)) : ]
+        )
 
+    def extract_windows(self, ts, w, fh=1):
+        data = ts[cfg.cols["X"]].to_numpy()
+        total_width = w + fh
+        if len(data) < total_width:
+            tmp = np.zeros([total_width, ])
+            for i in range(len(data)):
+                tmp[len(tmp) - len(data) + i] = data[i]
+            data = tmp
+        total_windows = len(data) - self.total_width + 1
+        X = np.empty([total_windows, self.input_width])
+        y = np.empty([total_windows, self.label_width])
+        for i in range(total_windows):
+            X[i] = data[i : i + self.input_width]
+            y[i] = data[i + self.input_width : i + self.total_width]
+        return X, y
+    
+    def augment_dataset(self, X, y):
+        """
+            Augment the dataset by duplicating instances and introducing gaussian noise.\n
+            X.shape: [D, ...]  , y: [D, ...] -> [2*D, ...] , [2*D, ...]
+        """
+        X = np.vstack((
+            X, 
+            X + np.random.normal(0, 0.1, size = X.shape),
+            X + np.indices(X.shape).sum(axis = 0) % 2 * np.random.normal(0, 0.1, size = X.shape),
+        ))
+        y = np.vstack((y, y, y))
+        tmp = np.c_[X.reshape(len(X), -1), y.reshape(len(y), -1)]
+        np.random.shuffle(tmp)
+        return tmp[:, :X.size//len(X)].reshape(X.shape), \
+            tmp[:, X.size//len(X):].reshape(y.shape)
+    
     def for_prediction(self):
         pass
 
@@ -196,7 +235,7 @@ class OldPreprocessor():
     def save_params(self, ddir):
         if not os.path.exists(ddir):
             os.makedirs(ddir)
-        f = os.path.join(ddir, cfg.files.preprocessing_params)
+        f = os.path.join(ddir, old_cfg.files.preprocessing_params)
         with open(f, 'w') as f:
             json.dump(self.params, f)
 
@@ -204,8 +243,8 @@ class OldPreprocessor():
 class SeriesFilter():
     def __init__(self, 
                     dframe,
-                    min_datapoints = cfg.seriesFilter.min_d_points, 
-                    patience = cfg.seriesFilter.patience, 
+                    min_datapoints = old_cfg.seriesFilter.min_d_points, 
+                    patience = old_cfg.seriesFilter.patience, 
                 ):
         """  """
         self._dframe = dframe

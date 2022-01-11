@@ -8,7 +8,7 @@ import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.base import TransformerMixin
 
-from ml_microservice import configuration as cfg
+from ml_microservice import configuration as old_cfg
 
 class EmpiricalRule(BaseEstimator, TransformerMixin):
     def __init__(self, k = 3):
@@ -46,6 +46,6 @@ class EmpiricalRule(BaseEstimator, TransformerMixin):
             os.makedirs(path_dir)
         f_path = os.path.join(
             path_dir, 
-            cfg.empRule.default_file
+            old_cfg.empRule.default_file
         )
         joblib.dump(self, f_path, compress = 3)

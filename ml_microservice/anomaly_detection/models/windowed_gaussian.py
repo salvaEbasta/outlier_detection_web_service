@@ -4,7 +4,7 @@ import os
 
 import numpy as np
 
-from ml_microservice import configuration as cfg
+from .. import configuration as cfg
 from ..detector import AnomalyDetector
 
 def q_function(mean, std_dev, x):
@@ -26,19 +26,14 @@ class WindowedGaussian(AnomalyDetector):
         self.w = w
         self.step = step
 
-    def fit(self, X, y = None):
-        """
-        Params:
-        - X: series
-        - y: predictions, not used
-        """
+    def fit(self, ts):
         self.window_ = []
         self.buffer_ = []
         self.mean_ = 0
         self.std_dev_ = 1
         self.errors_ = []
 
-        for x in X:
+        for x in self._X(ts):
             self.errors_.append(x - self.mean_)
             if len(self.window_) < self.w:
                 self.window_.append(x)
@@ -58,7 +53,7 @@ class WindowedGaussian(AnomalyDetector):
                     self.std_dev_ = np.finfo(float).eps
         return self
 
-    def predict_proba(self, X):
+    def predict_proba(self, ts):
         if not hasattr(self, "window_") or \
             not hasattr(self, "buffer_") or \
             not hasattr(self, "mean_") or \
@@ -72,7 +67,7 @@ class WindowedGaussian(AnomalyDetector):
         self.errors_ = []
 
         anomaly_scores = []
-        for x in X:
+        for x in self._X(ts):
             score = .0
             self.errors_.append(x - mean)
             if len(window) > 0:
@@ -97,21 +92,21 @@ class WindowedGaussian(AnomalyDetector):
             anomaly_scores.append(score)
         return np.array(anomaly_scores)
     
-    def predict(self, X):
+    def predict(self, ts):
         return np.array(
-            np.greater(self.predict_proba(X), 0.5), 
+            np.greater(self.predict_proba(ts), 0.5), 
             dtype = int
         )
     
-    def fit_predict(self, X, y = None):
+    def fit_predict(self, ts):
         self.window_ = []
         self.buffer_ = []
         self.mean_ = 0
         self.std_dev_ = 1
-        return self.predict(X)
+        return self.predict(ts)
     
     def save(self, path_dir):
         if not os.path.exists(path_dir):
             os.makedirs(path_dir)
-        path = os.path.join(path_dir, cfg.windGauss.default_file)
+        path = os.path.join(path_dir, cfg.windGauss["default_file"])
         joblib.dump(self, path, compress = 3)

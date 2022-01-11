@@ -9,11 +9,11 @@ from flask import json
 from werkzeug.exceptions import HTTPException
 
 from . import controllers
-from . import configuration as cfg
+from . import configuration as old_cfg
 
 
 def build_app():
-    log_file = os.path.join(cfg.log.path, 'microservice.log')
+    log_file = os.path.join(old_cfg.log.path, 'microservice.log')
     if not os.path.exists(log_file):
         os.makedirs(os.path.split(log_file)[0])
     
@@ -82,7 +82,7 @@ def build_app():
         return controllers.DetectorParameters(mID, version).handle()
 
     # Xml
-    @app.route('/api/timeseries', methods=['POST'])
+    @app.route('/api/convert/xml', methods=['POST'])
     def dump_xml():
         logging.info('Convert xml')
         #reload(controllers)

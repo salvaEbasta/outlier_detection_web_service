@@ -5,12 +5,12 @@ import os
 import numpy as np
 
 from tests import TEST_DIR
-from ml_microservice import configuration as cfg
+from ml_microservice import configuration as old_cfg
 from ml_microservice.anomaly_detection.binarization import empirical_rule as emp_r
 from ml_microservice.anomaly_detection.loaders import EmpRuleLoader
 
 def test_emp_rule_save_n_load():
-    file = cfg.empRule.file_ext.format("er")
+    file = old_cfg.empRule.file_ext.format("er")
     path = os.path.join(TEST_DIR, file)
     if os.path.exists(path):
         os.remove(path)

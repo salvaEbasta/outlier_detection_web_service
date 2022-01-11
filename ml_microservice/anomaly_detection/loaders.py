@@ -4,20 +4,20 @@ import re
 
 from sklearn.base import TransformerMixin
 
-from ml_microservice import configuration as cfg
-from ml_microservice.anomaly_detection.detector import AnomalyDetector
-from ml_microservice.anomaly_detection.models import windowed_gaussian as wg
+from . import configuration as cfg
+from .detector import AnomalyDetector
+from .models import windowed_gaussian as wg
 
 class Loader():
     def load(self, path) -> AnomalyDetector:
         raise NotImplementedError()
 
 class WindGaussLoader(Loader):
-    def __init__(self, file = cfg.windGauss.default_file):
+    def __init__(self, file = cfg.windGauss["default_file"]):
         self.file = file
         
     def load(self, path):
-        if re.match(cfg.windGauss.file_ext.format(".+"), self.file) is None:
+        if re.match(cfg.windGauss["file_ext"].format(".+"), self.file) is None:
             return None
         if self.file not in os.listdir(path):
             return None
@@ -30,11 +30,11 @@ class TransformerLoader():
         raise NotImplementedError()
 
 class EmpRuleLoader(TransformerLoader):
-    def __init__(self, file = cfg.empRule.default_file):
+    def __init__(self, file = cfg.empRule["default_file"]):
         self.file = file
         
     def load(self, path):
-        if re.match(cfg.empRule.file_ext.format(".+"), self.file) is None:
+        if re.match(cfg.empRule["file_ext"].format(".+"), self.file) is None:
             return None
         if self.file not in os.listdir(path):
             return None
