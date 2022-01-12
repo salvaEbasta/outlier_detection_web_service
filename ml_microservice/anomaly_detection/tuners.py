@@ -88,3 +88,10 @@ class WindGaussTuner(AbstractTuner):
             }
             self.explored_cfgs_.append(exploration_result)
         return self
+
+
+class DeepAnTTuner(AbstractTuner):
+    def __init__(self):
+        super().__init__(search_space = {
+            
+        })
