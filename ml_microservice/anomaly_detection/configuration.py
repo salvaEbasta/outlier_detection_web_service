@@ -1,8 +1,14 @@
 
+import json
+
+
 cols = {
     "timestamp": "timestamp",
     "X": "value",
     "y": "outlier",
+    "pred_prob": "outlier_score",
+    "forecast": "forecast",
+    "residual": "residual",
 }
 
 # Detector ------------------------------------------
@@ -15,6 +21,13 @@ windGauss = {
     "file_ext": anomDetect["file_ext"].format("{:s}.wingauss"),
 }
 windGauss["default_file"] = windGauss["file_ext"].format("wg")
+
+deepant = {
+    "forecast_dir": "forecaster",
+    "classifier_dir": "classifier",
+    "preload_file": "preload.json",
+    "params_file": "params.json"
+}
 
 empRule = {
     "file_ext": anomDetect["file_ext"].format("{:s}.emprule"),

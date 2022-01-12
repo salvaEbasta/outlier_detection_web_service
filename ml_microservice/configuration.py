@@ -81,6 +81,8 @@ timeseries = Namespace(
     date_column = cfg.cols["timestamp"],
     value_column = cfg.cols["X"],
     anom_column = cfg.cols["y"],
+    pred_prob_column =  cfg.cols["pred_prob"],
+    forecast_column = cfg.cols["forecast"],
     nan_str = "null",
 )
 

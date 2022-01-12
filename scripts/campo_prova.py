@@ -38,10 +38,13 @@ df["p"] = [np.nan]*len(df)
 df["v"] = [1.2]*len(df)
 #df = df.fillna(None).astype("string")
 # %%
-class P:
-    @staticmethod
-    def prova():
-        print("p")
-p = P()
-p.prova()
+class Prova():
+    def __init__(self, prova=2):
+        self.prova = prova
+        print("prova")
+    def p(self):
+        print(self.prova)
+    def pp(self):
+        print("UwU")
+p = Prova()
 # %%

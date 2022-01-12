@@ -1,7 +1,8 @@
 from . import configuration as cfg
 from . import loaders
 from . import tuners
-from .models import windowed_gaussian as wg
+from .models.windowed_gaussian import WindowedGaussian
+from .models.deepant import DeepAnT
 
 
 class Factory():
@@ -25,6 +26,13 @@ class Factory():
         self.factory = {}
         
         # WindowedGaussian -----------------------------
-        winGauss = wg.WindowedGaussian.__name__
+        winGauss = WindowedGaussian.__name__
         self.factory[winGauss][cfg.factory["loader_k"]] = loaders.WindGaussLoader
         self.factory[winGauss][cfg.factory["tuner_k"]] = tuners.WindGaussTuner
+
+        # DeepAnT --------------------------------------
+        dant = DeepAnT.__name__
+        self.factory[dant][cfg.factory["loader_k"]] = loaders.DeepAnTLoader
+        self.factory[dant][cfg.factory["tuner_k"]] = tuners.DeepAnTTuner
+
+        # SARIMAX --------------------------------------

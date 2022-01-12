@@ -1,6 +1,7 @@
 from collections import defaultdict
 import inspect
 
+import numpy as np
 import pandas as pd
 
 from . import configuration as cfg
@@ -123,6 +124,15 @@ class Persistent:
 
 class Forecaster:
     def forecast(self, ts):
+        """
+        Params:
+        -------
+        pd.DataFrame, ["timestamp", "value", \["outliers"]]
+
+        Returns:
+        --------
+        pd.DataFrame, ["timestamp", "value", "forecast", "residual"]
+        """
         raise NotImplementedError()
 
 class AnomalyDetector(BaseEstimator, Persistent):
@@ -162,18 +172,34 @@ class AnomalyDetector(BaseEstimator, Persistent):
         Params
         ------
         ts : pd.DataFrame
-            Must have columns ["Timestamp", "X"]. Optionally "y"
+            Must have columns ["Timestamp", "value"]. Optionally "outlier"
         Return
         ------
         self
         """
         raise NotImplementedError()
-    
+
     def predict(self, ts):
         """
         Params
         ------
         ts : pd.DataFrame
-            Must have columns ["Timestamp", "X"]
+            Must have columns ["Timestamp", "value"]
+        Returns:
+        --------
+        pd.DataFrame, columns ["Timestamp", "value", "outlier"]
+                        optionally also \["forecast"] and \["outlier_score"]]
         """
-        raise NotImplementedError()
+        if not hasattr(self, "predict_proba"):
+            raise NotImplementedError()
+        pred_prob = self.predict_proba(ts)
+        pred_prob[cfg.cols["y"]] = np.array(
+            np.greater(
+                pred_prob[cfg.cols["pred_prob"]].to_numpy(), 
+                getattr(self, "t", 0.5)
+            ), 
+            dtype = int
+        )
+        if cfg.cols["timestamp"] in ts.columns:
+            pred_prob[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]]
+        return pred_prob

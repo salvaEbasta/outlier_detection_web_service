@@ -587,14 +587,14 @@ class DetectPredict(AbstractController, RequestHandler):
                 "version": self.version,
                 "data": self.data,
                 'predictions': {
-                    "anomaly_class": tmp["y_hat"],
+                    "anomaly_class": tmp["y_hat"].to_list(),
                     "total_time(s)": tmp["pred_time"],
                 }
             }
             if "predict_prob" in tmp:
-                resp["predictions"]["anomaly_score"] = tmp["predict_prob"]
+                resp["predictions"]["anomaly_score"] = tmp["predict_prob"].to_list()
             if "forecast" in tmp:
-                resp["predictions"]["forecast"] = tmp["forecast"]
+                resp["predictions"]["forecast"] = tmp["forecast"].to_list()
             return resp, 200
         except ValueError as e:
             return {
@@ -665,20 +665,20 @@ class DetectorEvaluate(AbstractController, RequestHandler):
                 "mID": self.mID,
                 "version": self.version,
                 "data": {
-                    "values": tmp["values"],
+                    "values": tmp["values"].to_list(),
                 },
                 'evaluation': {
-                    "anomaly_class": tmp["prediction"],
+                    "anomaly_class": tmp["prediction"].to_list(),
                     "total_time(s)": tmp["eval_time"],
                     "scores": tmp["scores"],
                 }
             }
             if "dates" in tmp:
-                resp["data"]["dates"] = tmp["dates"]
+                resp["data"]["dates"] = tmp["dates"].astype("string").to_list()
             if "predict_prob" in tmp:
-                resp["predictions"]["anomaly_score"] = tmp["predict_prob"]
+                resp["evaluation"]["anomaly_score"] = tmp["predict_prob"].to_list()
             if "forecast" in tmp:
-                resp["predictions"]["forecast"] = tmp["forecast"]
+                resp["evaluation"]["forecast"] = tmp["forecast"].to_list()
             return resp, 200
         except ValueError as e:
             return {

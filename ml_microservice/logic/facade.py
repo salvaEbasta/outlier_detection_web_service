@@ -124,9 +124,10 @@ class LogicFacade():
         train_time = 0
         preproc = Preprocessor(ts)
         preproc.train_test_split()
-        tuner.tune(preproc.train)
+        ts_train, _ = preproc.train_test
+        tuner.tune(ts)
 
-        last_train_IDX = preproc.last_train_IDX_
+        last_train_IDX = len(ts_train) - 1
         train_time = time.time() - t0
         
         model = tuner.best_model_
@@ -157,18 +158,18 @@ class LogicFacade():
         
         t0 = time.time()
         model = loader.load(env.assets)
-        y_hat = model.predict(ts)
+        prediction = model.predict(ts)
         prediction_time = time.time() - t0
 
         self.logger.debug("Done detction")
         res = dict(
-            y_hat=y_hat, 
-            pred_time=prediction_time
+            y_hat = prediction[cfg.cols["y"]], 
+            pred_time = prediction_time
         )
-        if hasattr(model, "predict_prob_"):
-            res["predict_prob"] = model.predict_prob_
-        if hasattr(model, "forecast_"):
-            res["forecast"] = model.forecast_
+        if cfg.cols["forecast"] in prediction.columns:
+            res["forecast"] = prediction[cfg.cols["forecast"]]
+        if cfg.cols["pred_prob"] in prediction.columns:
+            res["predict_prob"] = prediction[cfg.cols["pred_prob"]]
         return res
     
 
@@ -218,15 +219,15 @@ class LogicFacade():
         self.logger.debug("Done detction")
 
         resp = dict(
-            values = preproc.ts[cfg.timeseries["X"]],
-            prediction = evaluator.prediction_,
+            values = evaluator.prediction_[cfg.cols["X"]],
+            prediction = evaluator.prediction_[cfg.cols["y"]],
             eval_time = eval_time,
             scores = scores
         )
-        if cfg.timeseries["timestamp"] in preproc.ts.columns:
-            resp["dates"] = preproc.ts[cfg.timeseries["timestamp"]]
-        if hasattr(evaluator, "forecast_"):
-            resp["forecast"] = evaluator.forecast_
-        if hasattr(evaluator, "predict_prob_"):
-            resp["predict_prob"] = evaluator.predict_prob_
+        if cfg.cols["timestamp"] in evaluator.prediction_.columns:
+            resp["dates"] = evaluator.prediction_[cfg.cols["timestamp"]]
+        if cfg.cols["forecast"] in evaluator.prediction_.columns:
+            resp["forecast"] = evaluator.prediction_[cfg.cols["forecast"]]
+        if cfg.cols["pred_prob"] in evaluator.prediction_.columns:
+            resp["predict_prob"] = evaluator.prediction_[cfg.cols["pred_prob"]]
         return resp

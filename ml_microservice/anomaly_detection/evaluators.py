@@ -8,21 +8,24 @@ from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import mean_squared_error
 
-from ml_microservice import configuration as old_cfg
 from ml_microservice.logic.detector_lib import Environment
+from .metrics import naive_metric, naive_prediction
 
 from . import configuration as cfg
-from .detector import AnomalyDetector
-from .loaders import WindGaussLoader
-from .transformers import Preprocessor
 
 def load_history(path_dir) -> pd.DataFrame:
     if not os.path.exists(path_dir):
         h = pd.DataFrame()
-        h[old_cfg.evaluator.date_column] = []
+        h[cfg.cols["timestamp"]] = ""
+        h["f1"] = ""
+        h["precision"] = ""
+        h["recall"] = ""
+        h["mse"] = ""
+        h["rmse"] = ""
+        h["naive"] = ""
         return pd.DataFrame()
     
-    h_path = os.path.join(path_dir, old_cfg.evaluator.history_file)
+    h_path = os.path.join(path_dir, cfg.evaluator["history_file"])
     h = pd.read_csv(h_path)
     h[cfg.cols["timestamp"]] = pd.to_datetime(h[cfg.cols["timestamp"]])
     return 
@@ -44,7 +47,7 @@ class GPEvaluator(Evaluator):
     """
     History frame:
     --------------
-    Timestamp - MSE - RMSE - F1 - PRECISION - RECALL
+    Timestamp - MSE - RMSE - NAIVE - F1 - PRECISION - RECALL
     """
     def __init__(self, env: Environment):
         self.env = env
@@ -53,33 +56,35 @@ class GPEvaluator(Evaluator):
     def save_history(self, path_dir):
         if not os.path.exists(path_dir):
             os.makedirs(path_dir)
-        h_path = os.path.join(path_dir, old_cfg.evaluator.history_file)
+        h_path = os.path.join(path_dir, cfg.evaluator["history_file"])
         self.history.to_csv(h_path, index = False)
     
     def evaluate(self, model, ts):
         y = ts[cfg.cols["y"]].to_numpy()
-        X = ts.drop(cfg.cols["y"], axis = 1)
-        self.prediction_  = model.predict(X)
-        f1 = f1_score(y, self.prediction_)
-        prec = precision_score(y, self.prediction_)
-        recall = recall_score(y, self.prediction_)
-
-        if hasattr(model, "predict_prob_"):
-            self.predict_prob_ = model.predict_prob_
+        X_ts = ts.drop(cfg.cols["y"], axis = 1)
+        
+        self.prediction_  = model.predict(X_ts)
+        y_hat = self.prediction_[cfg.cols["y"]].to_numpy()
+        f1 = f1_score(y, y_hat)
+        prec = precision_score(y, y_hat)
+        recall = recall_score(y, y_hat)
 
         mse = np.nan
         rmse = np.nan
-        if hasattr(model, "forecast_"):
-            self.forecast_ = model.forecast_
-            y = X[cfg.cols["X"]].to_numpy()
-            mse = mean_squared_error(y, model.forecast_)
-            rmse = mean_squared_error(y, model.forecast_, squared = False)
+        naive = np.nan
+        if cfg.cols["forecast"] in self.prediction_.columns:
+            forecast_ = self.prediction_[cfg.cols["forecast"]].to_numpy()
+            X = X_ts[cfg.cols["X"]].to_numpy()
+            mse = mean_squared_error(X, forecast_)
+            rmse = mean_squared_error(X, forecast_, squared = False)
+            naive = naive_metric(X, forecast_, naive_prediction(X))
         self.scores_ = {
             "f1": f1,
             "precision": prec,
             "recall": recall,
             "mse": mse,
             "rmse": rmse,
+            "naive": naive
         }
         return self.scores_
     
@@ -89,8 +94,26 @@ class GPEvaluator(Evaluator):
         self.scores_[cfg.cols["timestamp"]] = pd.to_datetime("today").normalize()
         self.history = self.history.append(self.scores_, ignore_index = True)
 
-    def is_performance_dropping(self):
+    def is_performance_dropping(self, win = 3):
         """
         naive score
         """
-        pass
+        naive_drop = False
+        if self.history["naive"].isnull().sum() == 0:
+            naive_drop = self.detect_degradation(
+                self.history["naive"].to_numpy(), win
+            )
+        
+        f1_drop = False
+        if self.history["f1"].isnull().sum() != 0:
+            f1_drop = self.detect_degradation(
+                -self.history["f1"].to_numpy(), win
+            )
+        return naive_drop or f1_drop
+
+    def detect_degradation(self, x, w = 3):
+        global_mean = np.mean(x)
+        grad = np.gradient(x)
+        win_mean = global_mean if x.shape[0] < w \
+                    else np.mean(x[-w:])
+        return global_mean < win_mean and np.mean(grad) > 0

@@ -1,30 +1,17 @@
 import numpy as np
-import tensorflow as tf
-from tensorflow import keras
-
-class NaivePredictor(keras.Model):
-    def __init__(self):
-        super().__init__()
-
-    def call(self, inputs):
-        results = inputs[..., -1]
-        return tf.expand_dims(results, axis=-1)
+from sklearn.metrics import mean_squared_error
 
 def naive_prediction(X):
-    return np.expand_dims(X[..., -1], axis=-1)
+    y = np.empty(X.shape)
+    y[0] = X[0]
+    y[1:] = X[:-1]
+    return y
 
-def naive_model_metric(X, y, y_hat):
+def naive_metric(y_true, y_hat, y_naive):
     """
-        Evaluate a regressor (y_hat) against a naive model.\n
-        Mse(regressor)/Mse(naive) -> good results come if result << 1\n
+    Better be < 1
+    Returns:
+    --------
+    MSE(y_true, y_hat) / MSE(y_true, y_naive)
     """
-    naive = NaivePredictor()
-    naive.compile(loss="mse")
-    y_naive = naive.predict(X)
-    assert y.shape == y_hat.shape == y_naive.shape
-    mse = keras.losses.MeanSquaredError()
-    return mse(y, y_hat).numpy() / mse(y, y_naive).numpy()
-
-def naive_y_metric(y, y_hat, y_naive):
-    mse = keras.losses.MeanSquaredError()
-    return mse(y, y_hat).numpy() / mse(y, y_naive).numpy()
+    return mean_squared_error(y_true, y_hat) / mean_squared_error(y_true, y_naive)
