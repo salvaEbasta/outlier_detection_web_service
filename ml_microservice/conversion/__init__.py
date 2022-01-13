@@ -104,7 +104,7 @@ class Xml2Csv():
         """ -> dict: {id: pd.Dataframe, } """
         logging.info(f'[.] xml2csv: id: {self._ids}, ignore: {self._ignores}')
         self._t_start = time.time()
-        self._t_end = time.time()
+        self._t_end = self._t_start
 
         rowAgg = RowAggregator()
         #rowAgg.set_mode(self.is_mono(xml))
