@@ -22,7 +22,7 @@ windGauss = {
 }
 windGauss["default_file"] = windGauss["file_ext"].format("wg")
 
-deepant = {
+forecaster_model = {
     "forecast_dir": "forecaster",
     "classifier_dir": "classifier",
     "preload_file": "preload.json",

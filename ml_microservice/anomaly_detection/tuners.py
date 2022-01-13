@@ -9,7 +9,7 @@ from kerastuner import Hyperband
 from . import configuration as cfg
 from .transformers import Preprocessor
 from .models.windowed_gaussian import WindowedGaussian
-from .models import deepant
+from .models import deepant, gru, lstm, sarimax, prophet
 
 class Tuner():
     def tune(self, ts):
@@ -212,3 +212,278 @@ class DeepAnTTuner(AbstractTuner):
         self.best_model_ = model
         self.best_score_ = 0
         return self
+
+class GRUTuner(AbstractTuner):
+    def __init__(self):
+        super().__init__(search_space = dict(
+            win = [16, 32, 64], 
+            size1 = [64, 128, 256],
+            dropout1 = [.3, .5],
+            rec_dropout1 = [.3, .5],
+            size2 = [64, 128, 256],
+            dropout2 = [.3, .5],
+            rec_dropout2 = [.3, .5],
+            gauss_win = [16, 32, 64, 128],
+            gauss_step = [8, 16, 32, 64]
+        ))
+    
+    def tune(self, ts):
+        self.explored_cfgs_ = []
+        pre = Preprocessor(ts)
+        ts = pre.nan_filled
+        # tune forecaster
+        X, y = pre.extract_windows(
+            ts[cfg.cols["X"]].copy().to_numpy(), 
+            w = self.win
+        )
+        X_train, X_dev = pre.train_test_split(X)
+        y_train, y_dev = pre.train_test_split(y)
+        X_train, y_train = pre.shuffle(X_train, y_train)
+        X_dev, y_dev = pre.shuffle(X_dev, y_dev)
+
+        def hypermodel(hp):
+            return gru.gru_forecaster(
+                win = hp.Choice("win", values = self.search_space["win"]),
+                size1 = hp.Choice("size1", values = self.search_space["size1"]), 
+                dropout1 = hp.Float(
+                    "dropout1", 
+                    min_value = self.search_space["dropout1"][0],
+                    max_value = self.search_space["dropout1"][1],
+                ),
+                rec_dropout1 = hp.Float(
+                    "rec_dropout1", 
+                    min_value = self.search_space["rec_dropout1"][0],
+                    max_value = self.search_space["rec_dropout1"][1],
+                ),
+                size2 = hp.Choice("size1", values = self.search_space["size2"]),
+                dropout2 = hp.Float(
+                    "dropout2", 
+                    min_value = self.search_space["dropout2"][0],
+                    max_value = self.search_space["dropout2"][1],
+                ),
+                rec_dropout2 = hp.Float(
+                    "rec_dropout2", 
+                    min_value = self.search_space["rec_dropout2"][0],
+                    max_value = self.search_space["rec_dropout2"][1],
+                ),
+            )
+
+        hb = Hyperband(hypermodel, factor = 5, seed = 42)
+        hb.search(
+            X_train, y_train,
+            validation_data = (X_dev, y_dev),
+            max_epochs = 50,
+            callbacks = [
+                callbacks.EarlyStopping(
+                    monitor = 'val_loss',
+                    patience = 5,
+                ), ]
+        )
+        best_hps = hb.get_best_hyperparameters()[0]
+        self.best_config_ = {k: v  for k, v in best_hps.values.items()}
+        self.win = self.best_config_["win"]
+
+        forecaster = hb.hypermodel.build(best_hps)
+        history = forecaster.fit(
+            X_train, y_train, 
+            batch_size = 2,
+            epochs = 50,
+            validation = (X_dev, y_dev),
+            callbacks = [
+                callbacks.EarlyStopping(
+                    monitor = 'val_loss',
+                    patience = 5,
+                ), ]
+        )
+        
+        val_loss_history = history.history['val_loss']
+        best_epoch_ = val_loss_history.index(min(val_loss_history)) + 1
+        self.forecaster = hb.hypermodel.build(best_hps)
+        X, y = pre.extract_windows(
+            ts[cfg.cols["X"]].copy().to_numpy(), 
+            w = self.win
+        )
+        X, y = pre.shuffle(X, y)
+        self.forecaster.fit(X, y, epochs = best_epoch_)
+
+        wgTuner = WindGaussTuner()
+        wgTuner.set_space({
+            "w": self.search_space["gauss_win"],
+            "step": self.search_space["gauss_step"],
+        })
+        wgTuner.tune(ts)
+        self.classifier = wgTuner.best_model_
+        for k, v in wgTuner.best_config_.items():
+            self.best_config_[k] = v
+        
+        self.explored_cfgs_.append({
+            "predictor": self.best_config_,
+            "classifier": wgTuner.explored_cfgs_,
+        })
+
+        self.preload = ts[cfg.cols["X"]].copy().to_numpy()[-self.win : ]
+
+        model = gru.GRU()
+        model.set_params(self.best_config_)
+        model.forecaster = self.forecaster
+        model.classifier = self.classifier
+        model.preload = self.preload
+        self.best_model_ = model
+        self.best_score_ = 0
+        return self
+
+class LSTMTuner(AbstractTuner):
+    def __init__(self):
+        super().__init__(search_space = dict(
+            win = [16, 32, 64], 
+            size1 = [64, 128, 256],
+            dropout1 = [.3, .5],
+            rec_dropout1 = [.3, .5],
+            size2 = [64, 128, 256],
+            dropout2 = [.3, .5],
+            rec_dropout2 = [.3, .5],
+            gauss_win = [16, 32, 64, 128],
+            gauss_step = [8, 16, 32, 64]
+        ))
+    
+    def tune(self, ts):
+        self.explored_cfgs_ = []
+        pre = Preprocessor(ts)
+        ts = pre.nan_filled
+        # tune forecaster
+        X, y = pre.extract_windows(
+            ts[cfg.cols["X"]].copy().to_numpy(), 
+            w = self.win
+        )
+        X_train, X_dev = pre.train_test_split(X)
+        y_train, y_dev = pre.train_test_split(y)
+        X_train, y_train = pre.shuffle(X_train, y_train)
+        X_dev, y_dev = pre.shuffle(X_dev, y_dev)
+
+        def hypermodel(hp):
+            return lstm.lstm_forecaster(
+                win = hp.Choice("win", values = self.search_space["win"]),
+                size1 = hp.Choice("size1", values = self.search_space["size1"]), 
+                dropout1 = hp.Float(
+                    "dropout1", 
+                    min_value = self.search_space["dropout1"][0],
+                    max_value = self.search_space["dropout1"][1],
+                ),
+                rec_dropout1 = hp.Float(
+                    "rec_dropout1", 
+                    min_value = self.search_space["rec_dropout1"][0],
+                    max_value = self.search_space["rec_dropout1"][1],
+                ),
+                size2 = hp.Choice("size1", values = self.search_space["size2"]),
+                dropout2 = hp.Float(
+                    "dropout2", 
+                    min_value = self.search_space["dropout2"][0],
+                    max_value = self.search_space["dropout2"][1],
+                ),
+                rec_dropout2 = hp.Float(
+                    "rec_dropout2", 
+                    min_value = self.search_space["rec_dropout2"][0],
+                    max_value = self.search_space["rec_dropout2"][1],
+                ),
+            )
+
+        hb = Hyperband(hypermodel, factor = 5, seed = 42)
+        hb.search(
+            X_train, y_train,
+            validation_data = (X_dev, y_dev),
+            max_epochs = 50,
+            callbacks = [
+                callbacks.EarlyStopping(
+                    monitor = 'val_loss',
+                    patience = 5,
+                ), ]
+        )
+        best_hps = hb.get_best_hyperparameters()[0]
+        self.best_config_ = {k: v  for k, v in best_hps.values.items()}
+        self.win = self.best_config_["win"]
+
+        forecaster = hb.hypermodel.build(best_hps)
+        history = forecaster.fit(
+            X_train, y_train, 
+            batch_size = 2,
+            epochs = 50,
+            validation = (X_dev, y_dev),
+            callbacks = [
+                callbacks.EarlyStopping(
+                    monitor = 'val_loss',
+                    patience = 5,
+                ), ]
+        )
+        
+        val_loss_history = history.history['val_loss']
+        best_epoch_ = val_loss_history.index(min(val_loss_history)) + 1
+        self.forecaster = hb.hypermodel.build(best_hps)
+        X, y = pre.extract_windows(
+            ts[cfg.cols["X"]].copy().to_numpy(), 
+            w = self.win
+        )
+        X, y = pre.shuffle(X, y)
+        self.forecaster.fit(X, y, epochs = best_epoch_)
+
+        wgTuner = WindGaussTuner()
+        wgTuner.set_space({
+            "w": self.search_space["gauss_win"],
+            "step": self.search_space["gauss_step"],
+        })
+        wgTuner.tune(ts)
+        self.classifier = wgTuner.best_model_
+        for k, v in wgTuner.best_config_.items():
+            self.best_config_[k] = v
+        
+        self.explored_cfgs_.append({
+            "predictor": self.best_config_,
+            "classifier": wgTuner.explored_cfgs_,
+        })
+
+        self.preload = ts[cfg.cols["X"]].copy().to_numpy()[-self.win : ]
+
+        model = lstm.LSTM()
+        model.set_params(self.best_config_)
+        model.forecaster = self.forecaster
+        model.classifier = self.classifier
+        model.preload = self.preload
+        self.best_model_ = model
+        self.best_score_ = 0
+        return self
+
+class SARIMAXTuner(AbstractTuner):
+    def __init__(self):
+        super().__init__(search_space = dict(
+            win = [16, 32, 64], 
+            size1 = [64, 128, 256],
+            dropout1 = [.3, .5],
+            rec_dropout1 = [.3, .5],
+            size2 = [64, 128, 256],
+            dropout2 = [.3, .5],
+            rec_dropout2 = [.3, .5],
+            gauss_win = [16, 32, 64, 128],
+            gauss_step = [8, 16, 32, 64]
+        ))
+    
+    def tune(self, ts):
+        pass
+        return self
+
+class ProphetTuner(AbstractTuner):
+    def __init__(self):
+        super().__init__(search_space = dict(
+            win = [16, 32, 64], 
+            size1 = [64, 128, 256],
+            dropout1 = [.3, .5],
+            rec_dropout1 = [.3, .5],
+            size2 = [64, 128, 256],
+            dropout2 = [.3, .5],
+            rec_dropout2 = [.3, .5],
+            gauss_win = [16, 32, 64, 128],
+            gauss_step = [8, 16, 32, 64]
+        ))
+
+    def tune(self, ts):
+        pass
+        return self
+    

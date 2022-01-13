@@ -145,21 +145,21 @@ class DeepAnT(AnomalyDetector, Forecaster):
         if not os.path.exists(path_dir):
             os.makedirs(path_dir)
         
-        forecaster_path = os.path.join(path_dir, cfg.deepant["forecaster_dir"])
+        forecaster_path = os.path.join(path_dir, cfg.forecaster_model["forecaster_dir"])
         if not os.path.exists(forecaster_path):
             os.makedirs(forecaster_path)
         self.forecaster.save(forecaster_path)
 
-        classifier_path = os.path.join(path_dir, cfg.deepant["classifier_dir"])
+        classifier_path = os.path.join(path_dir, cfg.forecaster_model["classifier_dir"])
         if not os.path.exists(forecaster_path):
             os.makedirs(forecaster_path)
         self.classifier.save(classifier_path)
 
-        preload_path = os.path.join(path_dir, cfg.deepant["preload_file"])
+        preload_path = os.path.join(path_dir, cfg.forecaster_model["preload_file"])
         with open(preload_path, "w") as f:
             json.dump(self.preload.tolist(), f)
         
-        params_path = os.path.join(path_dir, cfg.deepant["params_file"])
+        params_path = os.path.join(path_dir, cfg.forecaster_model["params_file"])
         with open(params_path, "w") as f:
             json.dump(self.get_params(), f)
         

@@ -3,6 +3,10 @@ from . import loaders
 from . import tuners
 from .models.windowed_gaussian import WindowedGaussian
 from .models.deepant import DeepAnT
+from .models.gru import GRU
+from .models.lstm import LSTM
+from .models.sarimax import SARIMAX
+from .models.prophet import Prophet
 
 
 class Factory():
@@ -35,4 +39,22 @@ class Factory():
         self.factory[dant][cfg.factory["loader_k"]] = loaders.DeepAnTLoader
         self.factory[dant][cfg.factory["tuner_k"]] = tuners.DeepAnTTuner
 
-        # SARIMAX --------------------------------------
+        # GRU -----------------------------------------
+        gru = GRU.__name__
+        self.factory[gru][cfg.factory["loader_k"]] = loaders.GRULoader
+        self.factory[gru][cfg.factory["tuner_k"]] = tuners.GRUTuner
+
+        # LSTM ----------------------------------------
+        lstm = LSTM.__name__
+        self.factory[lstm][cfg.factory["loader_k"]] = loaders.LSTMLoader
+        self.factory[lstm][cfg.factory["tuner_k"]] = tuners.LSTMTuner
+
+        # SARIMAX -------------------------------------
+        sarimax = SARIMAX.__name__
+        self.factory[sarimax][cfg.factory["loader_k"]] = loaders.SARIMAXLoader
+        self.factory[sarimax][cfg.factory["tuner_k"]] = tuners.SARIMAXTuner
+
+        # Prophet
+        prophet = Prophet.__name__
+        self.factory[prophet][cfg.factory["loader_k"]] = loaders.ProphetLoader
+        self.factory[prophet][cfg.factory["tuner_k"]] = tuners.ProphetTuner
