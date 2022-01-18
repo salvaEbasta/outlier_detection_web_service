@@ -7,6 +7,8 @@ import re
 import numpy as np
 from sklearn.base import TransformerMixin
 from tensorflow.keras import models
+import statsmodels.api as sm
+import prophet
 
 from . import configuration as cfg
 from .detector import AnomalyDetector
@@ -39,7 +41,7 @@ class DeepAnTLoader(Loader):
         preload_file = cfg.forecaster_model["preload_file"],
         params_file = cfg.forecaster_model["params_file"],
         classifier_dir = cfg.forecaster_model["classifier_dir"],
-        forecast_dir = cfg.forecaster_model["forecast_dir"]
+        forecaster_dir = cfg.forecaster_model["forecast_dir"]
     ):
         args, _, _, values = inspect.getargvalues(inspect.currentframe())
         values.pop("self")
@@ -49,8 +51,8 @@ class DeepAnTLoader(Loader):
     def load(self, path) -> AnomalyDetector:
         if self.preload_file not in os.listdir(path) or \
             self.params_file not in os.listdir(path) or \
-                self.forecast_file not in os.listdir(path) or \
-                    self.classifier_file not in os.listdir(path):
+                self.forecaster_dir not in os.listdir(path) or \
+                    self.classifier_dir not in os.listdir(path):
             return None
         d = DeepAnT()
         params_path = os.path.join(path, self.params_file)
@@ -78,7 +80,7 @@ class GRULoader(Loader):
         preload_file = cfg.forecaster_model["preload_file"],
         params_file = cfg.forecaster_model["params_file"],
         classifier_dir = cfg.forecaster_model["classifier_dir"],
-        forecast_dir = cfg.forecaster_model["forecast_dir"]
+        forecaster_dir = cfg.forecaster_model["forecast_dir"]
     ):
         args, _, _, values = inspect.getargvalues(inspect.currentframe())
         values.pop("self")
@@ -88,8 +90,8 @@ class GRULoader(Loader):
     def load(self, path) -> AnomalyDetector:
         if self.preload_file not in os.listdir(path) or \
             self.params_file not in os.listdir(path) or \
-                self.forecast_file not in os.listdir(path) or \
-                    self.classifier_file not in os.listdir(path):
+                self.forecaster_dir not in os.listdir(path) or \
+                    self.classifier_dir not in os.listdir(path):
             return None
         gru = GRU()
         params_path = os.path.join(path, self.params_file)
@@ -117,7 +119,7 @@ class LSTMLoader(Loader):
         preload_file = cfg.forecaster_model["preload_file"],
         params_file = cfg.forecaster_model["params_file"],
         classifier_dir = cfg.forecaster_model["classifier_dir"],
-        forecast_dir = cfg.forecaster_model["forecast_dir"]
+        forecaster_dir = cfg.forecaster_model["forecast_dir"]
     ):
         args, _, _, values = inspect.getargvalues(inspect.currentframe())
         values.pop("self")
@@ -127,8 +129,8 @@ class LSTMLoader(Loader):
     def load(self, path) -> AnomalyDetector:
         if self.preload_file not in os.listdir(path) or \
             self.params_file not in os.listdir(path) or \
-                self.forecast_file not in os.listdir(path) or \
-                    self.classifier_file not in os.listdir(path):
+                self.forecaster_dir not in os.listdir(path) or \
+                    self.classifier_dir not in os.listdir(path):
             return None
         lstm = LSTM()
         params_path = os.path.join(path, self.params_file)
@@ -153,10 +155,10 @@ class LSTMLoader(Loader):
 
 class SARIMAXLoader(Loader):
     def __init__(self, 
-        preload_file = cfg.forecaster_model["preload_file"],
         params_file = cfg.forecaster_model["params_file"],
         classifier_dir = cfg.forecaster_model["classifier_dir"],
-        forecast_dir = cfg.forecaster_model["forecast_dir"]
+        forecaster_dir = cfg.forecaster_model["forecast_dir"],
+        statsmodels_file = cfg.sarimax["statsmodels_file"]
     ):
         args, _, _, values = inspect.getargvalues(inspect.currentframe())
         values.pop("self")
@@ -164,39 +166,36 @@ class SARIMAXLoader(Loader):
             setattr(self, arg, val)
     
     def load(self, path) -> AnomalyDetector:
-        return
-        if self.preload_file not in os.listdir(path) or \
-            self.params_file not in os.listdir(path) or \
-                self.forecast_file not in os.listdir(path) or \
-                    self.classifier_file not in os.listdir(path):
+        if self.params_file not in os.listdir(path) or \
+            self.forecaster_dir not in os.listdir(path) or \
+                self.statsmodels_file not in os.listdir(
+                    os.path.join(path, self.forecaster_dir)
+                ) or self.classifier_dir not in os.listdir(path):
             return None
-        lstm = LSTM()
+        sarimax = SARIMAX()
         params_path = os.path.join(path, self.params_file)
         with open(params_path, "r") as f:
             params = json.load(params_path)
-        lstm.set_params(params)
-
-        preload_path = os.path.join(path, self.preload_file)
-        with open(preload_path, "r") as f:
-            preload = np.array(json.load(f))
-        setattr(lstm, "preload", preload)
+        sarimax.set_params(params)
 
         classifier_path = os.path.join(path, self.classifier_dir)
         wgLoader = WindGaussLoader()
         classifier = wgLoader.load(classifier_path)
-        setattr(lstm, "classifier", classifier)
+        setattr(sarimax, "classifier", classifier)
         
         forecaster_path = os.path.join(path, self.forecaster_dir)
-        forecaster = models.load_model(forecaster_path)
-        setattr(lstm, "forecaster", forecaster)
-        return lstm
+        forecaster_file = os.path.join(forecaster_path, self.statsmodels_file)
+        forecaster = sm.load(forecaster_file)
+        setattr(sarimax, "forecaster", forecaster)
+        return sarimax
 
 class ProphetLoader(Loader):
     def __init__(self, 
         preload_file = cfg.forecaster_model["preload_file"],
         params_file = cfg.forecaster_model["params_file"],
         classifier_dir = cfg.forecaster_model["classifier_dir"],
-        forecast_dir = cfg.forecaster_model["forecast_dir"]
+        forecaster_dir = cfg.forecaster_model["forecast_dir"],
+        forecaster_file = cfg.prophet["file"]
     ):
         args, _, _, values = inspect.getargvalues(inspect.currentframe())
         values.pop("self")
@@ -204,32 +203,29 @@ class ProphetLoader(Loader):
             setattr(self, arg, val)
     
     def load(self, path) -> AnomalyDetector:
-        return
-        if self.preload_file not in os.listdir(path) or \
-            self.params_file not in os.listdir(path) or \
-                self.forecast_file not in os.listdir(path) or \
-                    self.classifier_file not in os.listdir(path):
+        if self.params_file not in os.listdir(path) or \
+            self.forecaster_dir not in os.listdir(path) or \
+                self.forecaster_file not in os.listdir(
+                    os.path.join(path, self.forecaster_dir)
+                ) or self.classifier_dir not in os.listdir(path):
             return None
-        lstm = LSTM()
+        prophet = Prophet()
         params_path = os.path.join(path, self.params_file)
         with open(params_path, "r") as f:
             params = json.load(params_path)
-        lstm.set_params(params)
-
-        preload_path = os.path.join(path, self.preload_file)
-        with open(preload_path, "r") as f:
-            preload = np.array(json.load(f))
-        setattr(lstm, "preload", preload)
+        prophet.set_params(params)
 
         classifier_path = os.path.join(path, self.classifier_dir)
         wgLoader = WindGaussLoader()
         classifier = wgLoader.load(classifier_path)
-        setattr(lstm, "classifier", classifier)
+        setattr(prophet, "classifier", classifier)
         
         forecaster_path = os.path.join(path, self.forecaster_dir)
-        forecaster = models.load_model(forecaster_path)
-        setattr(lstm, "forecaster", forecaster)
-        return lstm
+        forecaster_file = os.path.join(forecaster_path, self.statsmodels_file)
+        with open(forecaster_file, "r") as fin:
+            forecaster = prophet.serialize.model_from_json(json.load(fin))
+        setattr(prophet, "forecaster", forecaster)
+        return prophet
 
 class TransformerLoader():
     def load(self, path) -> TransformerMixin:

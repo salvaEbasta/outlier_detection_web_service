@@ -17,7 +17,7 @@ def q_function(mean, std_dev, x):
     if x < mean:
         x = 2*mean - x
         return q_function(mean, std_dev, x)
-    z = (x - mean) / std_dev
+    z = (x - mean) / (std_dev + np.finfo(float).eps)
     return 0.5 * math.erfc(z / math.sqrt(2))
 
 class WindowedGaussian(AnomalyDetector):
@@ -45,7 +45,7 @@ class WindowedGaussian(AnomalyDetector):
         for x in self._X(ts):
             score = .0
             self.errors_.append(x - self.mean_)
-            if len(self.window) > 0:
+            if len(self.window_) > 0:
                 score = 1 - q_function(x, self.mean_, self.std_dev_)
             scores.append(score)
 
@@ -53,8 +53,8 @@ class WindowedGaussian(AnomalyDetector):
                 self.window_.append(x)
                 self.mean_ = np.mean(self.window_)
                 self.std_dev_ = np.std(self.window_)
-                if self.std_dev_ == 0.0:
-                    self.std_dev_ = np.finfo(float).eps    
+                #if self.std_dev_ == 0.0:
+                #    self.std_dev_ = .000001
                 continue
             self.buffer_.append(x)
             if len(self.buffer_) == self.step:
@@ -63,8 +63,8 @@ class WindowedGaussian(AnomalyDetector):
                 self.buffer_ = []
                 self.mean_ = np.mean(self.window_)
                 self.std_dev_ = np.std(self.window_)
-                if self.std_dev_ == 0.0:
-                    self.std_dev_ = np.finfo(float).eps
+                #if self.std_dev_ == 0.0:
+                #    self.std_dev_ = .000001
         scores = np.array(scores)
         if cfg.cols["y"] in ts:
             y = ts[cfg.cols["y"]].to_numpy()
@@ -102,8 +102,8 @@ class WindowedGaussian(AnomalyDetector):
                 window.append(x)
                 mean = np.mean(window)
                 std_dev = np.std(window)
-                if std_dev == 0.0:
-                    std_dev = np.finfo(float).eps    
+                #if std_dev == 0.0:
+                #    std_dev = .000001  
                 continue
             buffer.append(x)
             if len(buffer) == self.step:
@@ -112,8 +112,8 @@ class WindowedGaussian(AnomalyDetector):
                 buffer = []
                 mean = np.mean(window)
                 std_dev = np.std(window)
-                if std_dev == 0.0:
-                    std_dev = np.finfo(float).eps
+                #if std_dev == 0.0:
+                #    std_dev = .000001
         res = pd.DataFrame()
         if cfg.cols["timestamp"] in ts.columns:
             res[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]]

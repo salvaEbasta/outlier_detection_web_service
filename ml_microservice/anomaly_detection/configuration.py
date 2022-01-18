@@ -1,7 +1,4 @@
 
-import json
-
-
 cols = {
     "timestamp": "timestamp",
     "X": "value",
@@ -27,6 +24,16 @@ forecaster_model = {
     "classifier_dir": "classifier",
     "preload_file": "preload.json",
     "params_file": "params.json"
+}
+
+sarimax = {
+    "statsmodels_file": "sarimax_results.pkl"
+}
+
+prophet = {
+    "timestamp": "ds",
+    "value": "y",
+    "file": "prophet.json",
 }
 
 empRule = {

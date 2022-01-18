@@ -24,3 +24,6 @@ class Prophet(AnomalyDetector, Forecaster):
         self.preload = None
         self.forecaster = None
         self.classifier = None
+    
+    # TODO: fit - predict_proba - save
+    # TODO: Tuner

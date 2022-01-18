@@ -454,19 +454,47 @@ class LSTMTuner(AbstractTuner):
 class SARIMAXTuner(AbstractTuner):
     def __init__(self):
         super().__init__(search_space = dict(
-            win = [16, 32, 64], 
-            size1 = [64, 128, 256],
-            dropout1 = [.3, .5],
-            rec_dropout1 = [.3, .5],
-            size2 = [64, 128, 256],
-            dropout2 = [.3, .5],
-            rec_dropout2 = [.3, .5],
             gauss_win = [16, 32, 64, 128],
             gauss_step = [8, 16, 32, 64]
         ))
-    
+
     def tune(self, ts):
-        pass
+        self.explored_cfgs_ = []
+
+        if cfg.cols["y"] not in ts:
+            X = ts.drop(cfg.cols["y"], axis = 1)
+            self.best_model_ = sarimax.SARIMAX().fit(X)
+            self.best_config_ = self.best_model_.get_params()
+            self.best_score_ = 0
+            return self
+        
+        #Gridsearch
+        self.best_model_ = None
+        self.best_config_ = self.best_model_.get_params()
+        self.best_score_ = 0
+
+        self.explored_cfgs_ = []
+        configs = self.to_explore()
+        y = ts[cfg.cols["y"]].to_numpy()
+        X = ts.drop(cfg.cols["y"], axis = 1)
+        
+        for config in configs:
+            current = sarimax.SARIMAX()
+            current.set_params(config)
+            current.fit(X)
+            y_hat = current.predict(X)
+            score = f1_score(y, y_hat[cfg.cols["y"]].to_numpy())
+            
+            if self.best_score_ < score:
+                self.best_score_ = score
+                self.best_model_ = current
+                self.best_config_ = config
+            
+            exploration_result = {
+                "config": config,
+                "f1": score
+            }
+            self.explored_cfgs_.append(exploration_result)
         return self
 
 class ProphetTuner(AbstractTuner):
@@ -484,6 +512,40 @@ class ProphetTuner(AbstractTuner):
         ))
 
     def tune(self, ts):
-        pass
+        self.explored_cfgs_ = []
+
+        if cfg.cols["y"] not in ts:
+            X = ts.drop(cfg.cols["y"], axis = 1)
+            self.best_model_ = sarimax.SARIMAX().fit(X)
+            self.best_config_ = self.best_model_.get_params()
+            self.best_score_ = 0
+            return self
+        
+        #Gridsearch
+        self.best_model_ = None
+        self.best_config_ = self.best_model_.get_params()
+        self.best_score_ = 0
+
+        self.explored_cfgs_ = []
+        configs = self.to_explore()
+        y = ts[cfg.cols["y"]].to_numpy()
+        X = ts.drop(cfg.cols["y"], axis = 1)
+        
+        for config in configs:
+            current = sarimax.SARIMAX()
+            current.set_params(config)
+            current.fit(X)
+            y_hat = current.predict(X)
+            score = f1_score(y, y_hat[cfg.cols["y"]].to_numpy())
+            
+            if self.best_score_ < score:
+                self.best_score_ = score
+                self.best_model_ = current
+                self.best_config_ = config
+            
+            exploration_result = {
+                "config": config,
+                "f1": score
+            }
+            self.explored_cfgs_.append(exploration_result)
         return self
-    

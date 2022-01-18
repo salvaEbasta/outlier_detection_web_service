@@ -32,11 +32,19 @@ df.astype("string").to_dict()
 # %%
 import numpy as np
 import pandas as pd
-df = pd.DataFrame({"d": ["2014-01-02", "2015-01-02"]})
-df["d"] = pd.to_datetime(df["d"])
-df["p"] = [np.nan]*len(df)
-df["v"] = [1.2]*len(df)
-#df = df.fillna(None).astype("string")
+from scipy import signal
+import matplotlib.pyplot as plt
+x = np.linspace(start= -10, stop=10, num=1000)
+y = np.sin(x)
+plt.plot(x, y)
+plt.vlines(x[0], -1, 1, 'r')
+plt.vlines(x[333], -1, 1, 'r')
+plt.vlines(x[666], -1, 1, 'r')
+plt.vlines(x[999], -1, 1, 'r')
+fs, P = signal.periodogram(y)
+p = int(1 / (fs[np.argmax(P)] + np.finfo(float).eps))
+p, fs[np.argmax(P)]
+
 # %%
 class Prova():
     def __init__(self, prova=2):
@@ -47,4 +55,42 @@ class Prova():
     def pp(self):
         print("UwU")
 p = Prova()
+# %%
+import os, sys
+import numpy as np
+import pandas as pd
+ts = pd.DataFrame({
+    "timestamp": [
+        "2014-01-02", 
+        "2014-01-03", 
+        "2014-01-04", 
+        "2014-01-05", 
+        "2014-01-07", 
+        "2014-01-08", 
+        "2014-01-09", 
+        "2014-01-10",
+        "2014-01-11",
+        ],
+    "value": [
+        25,
+        9,
+        4,
+        1,
+        0,
+        1,
+        4,
+        9,
+        25,
+    ]
+})
+ts["timestamp"] = pd.to_datetime(ts["timestamp"])
+
+ml_path = ".."
+if ml_path not in sys.path:
+    sys.path.append(ml_path)
+from ml_microservice.anomaly_detection.models.sarimax import SARIMAX
+s = SARIMAX()
+s.fit(ts)
+s.predict(ts)
+
 # %%
