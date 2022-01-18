@@ -8,7 +8,6 @@ import numpy as np
 from sklearn.base import TransformerMixin
 from tensorflow.keras import models
 import statsmodels.api as sm
-import prophet
 
 from . import configuration as cfg
 from .detector import AnomalyDetector
@@ -222,8 +221,7 @@ class ProphetLoader(Loader):
         
         forecaster_path = os.path.join(path, self.forecaster_dir)
         forecaster_file = os.path.join(forecaster_path, self.statsmodels_file)
-        with open(forecaster_file, "r") as fin:
-            forecaster = prophet.serialize.model_from_json(json.load(fin))
+        forecaster = joblib.load(forecaster_file)
         setattr(prophet, "forecaster", forecaster)
         return prophet
 

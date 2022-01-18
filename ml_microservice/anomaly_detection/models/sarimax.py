@@ -92,14 +92,14 @@ class SARIMAX(AnomalyDetector, Forecaster):
                 seasonal = s, 
                 m = m
             )
-        order = arima.order
-        seasonal_order = arima.seasonal_order
+        self.order = arima.order
+        self.seasonal_order = arima.seasonal_order
         try:
             self.forecaster = sm.tsa.SARIMAX(
                 endo,
                 exo,
-                order = order,
-                seasonal_order = seasonal_order,
+                order = self.order,
+                seasonal_order = self.seasonal_order,
                 time_varying = True, 
                 mle_regression = False
             ).fit()
@@ -107,8 +107,8 @@ class SARIMAX(AnomalyDetector, Forecaster):
             self.forecaster = sm.tsa.SARIMAX(
                 endo,
                 exo,
-                order = order,
-                seasonal_order = seasonal_order,
+                order = self.order,
+                seasonal_order = self.seasonal_order,
                 time_varying = True, 
                 mle_regression = False,
                 enforce_stationarity = False, 

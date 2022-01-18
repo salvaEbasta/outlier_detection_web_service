@@ -2,6 +2,8 @@ import itertools
 import json
 import os
 
+import pandas as pd
+from sklearn.metrics import mean_squared_error
 from sklearn.metrics import f1_score
 from tensorflow.keras import callbacks
 from kerastuner import Hyperband
@@ -61,17 +63,19 @@ class WindGaussTuner(AbstractTuner):
     def __init__(self):
         super().__init__(search_space = {
             "w": [32, 64, 128, 256],
-            "k": [16, 32, 64, 128],
+            "step": [16, 32, 64, 128],
         })
 
     def tune(self, ts):
-        self.explored_cfgs_ = []
-
         if cfg.cols["y"] not in ts:
             X = ts.drop(cfg.cols["y"], axis = 1)
             self.best_model_ = WindowedGaussian().fit(X)
             self.best_config_ = self.best_model_.get_params()
-            self.best_score_ = 0
+            self.best_score_ = -1
+            self.explored_cfgs_ = [{
+                "config": self.best_config_,
+                "f1": -1
+            },]
             return self
         
         #Gridsearch
@@ -186,6 +190,12 @@ class DeepAnTTuner(AbstractTuner):
         )
         X, y = pre.shuffle(X, y)
         self.forecaster.fit(X, y, epochs = best_epoch_)
+        y_hat = self.forecaster.predict(X_dev).flatten()
+        rmse = mean_squared_error(y_dev, y_hat, squared = False)
+        forecaster_configs = [{
+            "config": self.best_config_,
+            "rmse": rmse,
+        },]
 
         wgTuner = WindGaussTuner()
         wgTuner.set_space({
@@ -194,17 +204,15 @@ class DeepAnTTuner(AbstractTuner):
         })
         wgTuner.tune(ts)
         self.classifier = wgTuner.best_model_
-        for k, v in wgTuner.best_config_.items():
-            self.best_config_[k] = v
-        
-        self.explored_cfgs_.append({
-            "predictor": self.best_config_,
-            "classifier": wgTuner.explored_cfgs_,
-        })
+
+        self.explored_cfgs_["predictor"] = forecaster_configs
+        self.explored_cfgs_["classifier"] = wgTuner.explored_cfgs_
 
         self.preload = ts[cfg.cols["X"]].copy().to_numpy()[-self.win : ]
 
         model = deepant.DeepAnT()
+        self.best_config_["gauss_win"] = wgTuner.best_config_["w"]
+        self.best_config_["gauss_step"] = wgTuner.best_config_["step"]
         model.set_params(self.best_config_)
         model.forecaster = self.forecaster
         model.classifier = self.classifier
@@ -228,7 +236,7 @@ class GRUTuner(AbstractTuner):
         ))
     
     def tune(self, ts):
-        self.explored_cfgs_ = []
+        self.explored_cfgs_ = {}
         pre = Preprocessor(ts)
         ts = pre.nan_filled
         # tune forecaster
@@ -305,6 +313,13 @@ class GRUTuner(AbstractTuner):
         )
         X, y = pre.shuffle(X, y)
         self.forecaster.fit(X, y, epochs = best_epoch_)
+        y_hat = self.forecaster.predict(X_dev).flatten()
+        rmse = mean_squared_error(y_dev, y_hat, squared = False)
+        forecaster_configs = [{
+            "config": self.best_config_,
+            "rmse": rmse,
+        },]
+
 
         wgTuner = WindGaussTuner()
         wgTuner.set_space({
@@ -313,17 +328,15 @@ class GRUTuner(AbstractTuner):
         })
         wgTuner.tune(ts)
         self.classifier = wgTuner.best_model_
-        for k, v in wgTuner.best_config_.items():
-            self.best_config_[k] = v
         
-        self.explored_cfgs_.append({
-            "predictor": self.best_config_,
-            "classifier": wgTuner.explored_cfgs_,
-        })
+        self.explored_cfgs_["predictor"] = forecaster_configs
+        self.explored_cfgs_["classifier"] = wgTuner.explored_cfgs_
 
         self.preload = ts[cfg.cols["X"]].copy().to_numpy()[-self.win : ]
 
         model = gru.GRU()
+        self.best_config_["gauss_win"] = wgTuner.best_config_["w"]
+        self.best_config_["gauss_step"] = wgTuner.best_config_["step"]
         model.set_params(self.best_config_)
         model.forecaster = self.forecaster
         model.classifier = self.classifier
@@ -347,7 +360,7 @@ class LSTMTuner(AbstractTuner):
         ))
     
     def tune(self, ts):
-        self.explored_cfgs_ = []
+        self.explored_cfgs_ = {}
         pre = Preprocessor(ts)
         ts = pre.nan_filled
         # tune forecaster
@@ -424,6 +437,12 @@ class LSTMTuner(AbstractTuner):
         )
         X, y = pre.shuffle(X, y)
         self.forecaster.fit(X, y, epochs = best_epoch_)
+        y_hat = self.forecaster.predict(X_dev).flatten()
+        rmse = mean_squared_error(y_dev, y_hat, squared = False)
+        forecaster_configs = [{
+            "config": self.best_config_,
+            "rmse": rmse,
+        },]
 
         wgTuner = WindGaussTuner()
         wgTuner.set_space({
@@ -432,17 +451,15 @@ class LSTMTuner(AbstractTuner):
         })
         wgTuner.tune(ts)
         self.classifier = wgTuner.best_model_
-        for k, v in wgTuner.best_config_.items():
-            self.best_config_[k] = v
-        
-        self.explored_cfgs_.append({
-            "predictor": self.best_config_,
-            "classifier": wgTuner.explored_cfgs_,
-        })
+
+        self.explored_cfgs_["predictor"] = forecaster_configs
+        self.explored_cfgs_["classifier"] = wgTuner.explored_cfgs_
 
         self.preload = ts[cfg.cols["X"]].copy().to_numpy()[-self.win : ]
 
         model = lstm.LSTM()
+        self.best_config_["gauss_win"] = wgTuner.best_config_["w"]
+        self.best_config_["gauss_step"] = wgTuner.best_config_["step"]
         model.set_params(self.best_config_)
         model.forecaster = self.forecaster
         model.classifier = self.classifier
@@ -459,93 +476,123 @@ class SARIMAXTuner(AbstractTuner):
         ))
 
     def tune(self, ts):
-        self.explored_cfgs_ = []
+        self.explored_cfgs_ = {}
 
-        if cfg.cols["y"] not in ts:
+        pre = Preprocessor(ts)
+        ts = pre.nan_filled
+        X = ts
+        if cfg.cols["y"] in ts.columns:
             X = ts.drop(cfg.cols["y"], axis = 1)
-            self.best_model_ = sarimax.SARIMAX().fit(X)
-            self.best_config_ = self.best_model_.get_params()
-            self.best_score_ = 0
-            return self
+        self.best_model_ = sarimax.SARIMAX().fit(X)
+        y_hat = self.best_model_.forecaster.predict(ts[cfg.cols["X"]]).to_numpy()
+        score = mean_squared_error(
+            X[cfg.cols["X"]].to_numpy(), 
+            y_hat, 
+            squared = False
+        )
+        forecaster_cfgs_ = [{
+            "config": {
+                "order": self.best_model_.order,
+                "seasonal_order": self.best_model_.seasonal_order,
+            },
+            "rmse": score,
+        }]
         
-        #Gridsearch
-        self.best_model_ = None
-        self.best_config_ = self.best_model_.get_params()
-        self.best_score_ = 0
+        wgTuner = WindGaussTuner()
+        wgTuner.set_space({
+            "w": self.search_space["gauss_win"],
+            "step": self.search_space["gauss_step"],
+        })
+        wgTuner.tune(ts)
+        self.classifier = wgTuner.best_model_
+        
+        self.explored_cfgs_["predictor"] = forecaster_cfgs_
+        self.explored_cfgs_["classifier"] = wgTuner.explored_cfgs_
 
-        self.explored_cfgs_ = []
-        configs = self.to_explore()
-        y = ts[cfg.cols["y"]].to_numpy()
-        X = ts.drop(cfg.cols["y"], axis = 1)
-        
-        for config in configs:
-            current = sarimax.SARIMAX()
-            current.set_params(config)
-            current.fit(X)
-            y_hat = current.predict(X)
-            score = f1_score(y, y_hat[cfg.cols["y"]].to_numpy())
-            
-            if self.best_score_ < score:
-                self.best_score_ = score
-                self.best_model_ = current
-                self.best_config_ = config
-            
-            exploration_result = {
-                "config": config,
-                "f1": score
-            }
-            self.explored_cfgs_.append(exploration_result)
+        self.best_config_ = {}
+        self.best_config_["order"] = self.best_model_.order
+        self.best_config_["seasonal_order"] = self.best_model_.seasonal_order
+        self.best_config_["gauss_win"] = wgTuner.best_config_["w"]
+        self.best_config_["gauss_step"] = wgTuner.best_config_["step"]
+
+        self.best_model_.classifier = self.classifier
+        self.best_model_.gauss_win = wgTuner.best_config_["w"]
+        self.best_model_.gauss_step = wgTuner.best_config_["step"]
+        self.best_score_ = 0
         return self
 
 class ProphetTuner(AbstractTuner):
     def __init__(self):
         super().__init__(search_space = dict(
-            win = [16, 32, 64], 
-            size1 = [64, 128, 256],
-            dropout1 = [.3, .5],
-            rec_dropout1 = [.3, .5],
-            size2 = [64, 128, 256],
-            dropout2 = [.3, .5],
-            rec_dropout2 = [.3, .5],
             gauss_win = [16, 32, 64, 128],
-            gauss_step = [8, 16, 32, 64]
+            gauss_step = [8, 16, 32, 64],
+            changepoint_prior_scale = [0.001, 0.01, 0.1, 0.5],
+            seasonality_prior_scale = [0.01, 0.1, 1.0, 10.0],
         ))
 
     def tune(self, ts):
-        self.explored_cfgs_ = []
-
-        if cfg.cols["y"] not in ts:
-            X = ts.drop(cfg.cols["y"], axis = 1)
-            self.best_model_ = sarimax.SARIMAX().fit(X)
-            self.best_config_ = self.best_model_.get_params()
-            self.best_score_ = 0
-            return self
-        
+        self.explored_cfgs_ = {}
         #Gridsearch
-        self.best_model_ = None
-        self.best_config_ = self.best_model_.get_params()
-        self.best_score_ = 0
+        self.forecaster = None
+        self.forecaster_config = None
+        self.forecaster_score = float('inf')
+        forecaster_cfgs_ = []
 
-        self.explored_cfgs_ = []
-        configs = self.to_explore()
-        y = ts[cfg.cols["y"]].to_numpy()
-        X = ts.drop(cfg.cols["y"], axis = 1)
+        prophet_space = {}
+        prophet_space["changepoint_prior_scale"] = self.search_space["changepoint_prior_scale"]
+        prophet_space["seasonality_prior_scale"] = self.search_space["seasonality_prior_scale"]
+        prophet_configs = [dict(zip(prophet_space.keys(), v)) 
+                            for v in itertools.product(*prophet_space.values())]
         
-        for config in configs:
-            current = sarimax.SARIMAX()
-            current.set_params(config)
-            current.fit(X)
-            y_hat = current.predict(X)
-            score = f1_score(y, y_hat[cfg.cols["y"]].to_numpy())
-            
-            if self.best_score_ < score:
-                self.best_score_ = score
-                self.best_model_ = current
-                self.best_config_ = config
-            
-            exploration_result = {
+        prophet_ts = pd.DataFrame()
+        prophet_ts[cfg.prophet["timestamp"]] = ts[cfg.cols["timestamp"]]
+        prophet_ts[cfg.prophet["value"]] = ts[cfg.cols["X"]]
+        for config in prophet_configs:
+            p = prophet.Prophet(
+                changepoint_prior_scale = config["changepoint_prior_scale"],
+                seasonality_prior_scale = config["seasonality_prior_scale"]
+            )
+            p.fit(prophet_ts, verbose = False)
+            future = p.make_future_dataframe(periods = 0, freq = "W")
+            prophet_res = p.predict(future)
+            y_hat = prophet_res["yhat"].to_numpy()
+
+            score = mean_squared_error(
+                ts[cfg.cols["X"]].to_numpy(), 
+                y_hat,
+                squared = False
+            )
+            forecaster_cfgs_.append({
                 "config": config,
-                "f1": score
-            }
-            self.explored_cfgs_.append(exploration_result)
+                "rmse": score,
+            })
+            
+            if score < self.forecaster_score:
+                self.forecaster_score = score
+                self.forecaster = p
+                self.forecaster_config = config
+        
+        wgTuner = WindGaussTuner()
+        wgTuner.set_space({
+            "w": self.search_space["gauss_win"],
+            "step": self.search_space["gauss_step"],
+        })
+        wgTuner.tune(ts)
+        self.classifier = wgTuner.best_model_
+        
+        self.explored_cfgs_["predictor"] = forecaster_cfgs_
+        self.explored_cfgs_["classifier"] = wgTuner.explored_cfgs_
+
+        self.best_config_ = {}
+        for k, v in self.forecaster_config.items():
+            self.best_config_[k] = v
+        self.best_config_["gauss_win"] = wgTuner.best_config_["w"]
+        self.best_config_["gauss_step"] = wgTuner.best_config_["step"]
+
+        model = prophet.Prophet()
+        model.set_params(self.best_config_)
+        model.forecaster = self.forecaster
+        model.classifier = self.classifier
+        self.best_model_ = model
+        self.best_score_ = 0
         return self

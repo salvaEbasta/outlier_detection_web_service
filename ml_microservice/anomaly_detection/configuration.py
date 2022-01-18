@@ -33,7 +33,7 @@ sarimax = {
 prophet = {
     "timestamp": "ds",
     "value": "y",
-    "file": "prophet.json",
+    "file": "prophet.pkl",
 }
 
 empRule = {

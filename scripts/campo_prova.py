@@ -94,3 +94,6 @@ s.fit(ts)
 s.predict(ts)
 
 # %%
+import prophet
+
+# %%
