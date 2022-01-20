@@ -26,7 +26,6 @@ class Prophet(AnomalyDetector, Forecaster):
         self.forecaster = None
         self.classifier = None
     
-    # TODO: Tuner
     def fit(self, ts):
         #preprocessing
         pre = Preprocessor(ts)

@@ -33,7 +33,7 @@ def DeepAnT_forecaster(win = 32, maps = 32, kernel = 2, conv_strides = 1,
             ) (pool)
             pool = layers.MaxPool1D(pool_size = pool_kernel) (conv)
         f = layers.Flatten() (pool)
-        d = layers.Dense(units = hidden_size, activation = 'relu') (f)
+        d = layers.Dense(units = hidden_size, activation = 'relu', kernel_initializer="he_normal") (f)
         d = layers.Dropout(dropout_rate) (d)
         o = layers.Dense(units = forecasting_horizon) (d)
         m = Model(inputs = i, outputs = o, name = "DeepAnT")

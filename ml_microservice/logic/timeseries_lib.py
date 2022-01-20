@@ -83,7 +83,8 @@ class TimeseriesLibrary:
         ts = pd.DataFrame()
         ts[self.date_col] = df[self.date_col]
         ts[self.value_col] = df[tsID]
-        ts[self.anom_col] = df[self.anom_col] if self.anom_col in df.columns else ""
+        if self.anom_col in df.columns:
+            ts[self.anom_col] = df[self.anom_col]
         return ts
 
     def has_group(self, group: str):

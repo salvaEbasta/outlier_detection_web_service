@@ -125,7 +125,7 @@ class LogicFacade():
         preproc = Preprocessor(ts)
         preproc.train_test_split()
         ts_train, _ = preproc.train_test
-        tuner.tune(ts)
+        tuner.tune(ts_train)
 
         last_train_IDX = len(ts_train) - 1
         train_time = time.time() - t0
