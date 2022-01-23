@@ -1,4 +1,4 @@
-from ml_microservice import RESTservice
+from ml_microservice import RPCservice
 
 if __name__ == "__main__":
-    RESTservice.build_app().run()
+    RPCservice.build_app().run()
