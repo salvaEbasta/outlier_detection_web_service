@@ -155,7 +155,7 @@ class DeepAnTTuner(AbstractTuner):
 
         hb = Hyperband(
             hypermodel, factor = 5, seed = 42, project_name = "deepant", overwrite = True,
-            objective = Objective("val_mean_squared_error", direction="min"),
+            objective = Objective("val_loss", direction="min"),
         )
         hb.search(
             X_train, y_train,
@@ -281,7 +281,7 @@ class GRUTuner(AbstractTuner):
 
         hb = Hyperband(
             hypermodel, factor = 5, seed = 42, project_name = "gru", overwrite = True,
-            objective = Objective("val_mean_squared_error", direction="min"),
+            objective = Objective("val_loss", direction="min"),
         )
         hb.search(
             X_train, y_train,
@@ -408,7 +408,7 @@ class LSTMTuner(AbstractTuner):
 
         hb = Hyperband(
             hypermodel, factor = 5, seed = 42, project_name = "lstm", overwrite = True,
-            objective = Objective("val_mean_squared_error", direction="min"),
+            objective = Objective("val_loss", direction="min"),
         )
         hb.search(
             X_train, y_train,
