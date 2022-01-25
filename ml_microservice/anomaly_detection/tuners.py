@@ -117,7 +117,7 @@ class DeepAnTTuner(AbstractTuner):
             conv_strides = [1, 2, ], 
             pool_kernel = [2, ], 
             conv_layers = [2, ], 
-            hidden_size = [128, 256, 512],
+            hidden_size = [128, 256, ],
             dropout_rate = [.2, .4],
             gauss_win = [16, 32, 64, 128],
             gauss_step = [8, 16, 32, 64]
@@ -160,7 +160,7 @@ class DeepAnTTuner(AbstractTuner):
         hb.search(
             X_train, y_train,
             validation_data = (X_dev, y_dev),
-            epochs = 50,
+            epochs = 25,
             callbacks = [
                 callbacks.EarlyStopping(
                     monitor = 'val_loss',
@@ -175,7 +175,7 @@ class DeepAnTTuner(AbstractTuner):
         history = forecaster.fit(
             X_train, y_train, 
             batch_size = 2,
-            epochs = 50,
+            epochs = 25,
             validation = (X_dev, y_dev),
             callbacks = [
                 callbacks.EarlyStopping(
@@ -286,7 +286,7 @@ class GRUTuner(AbstractTuner):
         hb.search(
             X_train, y_train,
             validation_data = (X_dev, y_dev),
-            epochs = 50,
+            epochs = 25,
             callbacks = [
                 callbacks.EarlyStopping(
                     monitor = 'val_loss',
@@ -301,7 +301,7 @@ class GRUTuner(AbstractTuner):
         history = forecaster.fit(
             X_train, y_train, 
             batch_size = 2,
-            epochs = 50,
+            epochs = 25,
             validation = (X_dev, y_dev),
             callbacks = [
                 callbacks.EarlyStopping(
@@ -413,7 +413,7 @@ class LSTMTuner(AbstractTuner):
         hb.search(
             X_train, y_train,
             validation_data = (X_dev, y_dev),
-            epochs = 50,
+            epochs = 25,
             callbacks = [
                 callbacks.EarlyStopping(
                     monitor = 'val_loss',
@@ -428,7 +428,7 @@ class LSTMTuner(AbstractTuner):
         history = forecaster.fit(
             X_train, y_train, 
             batch_size = 2,
-            epochs = 50,
+            epochs = 25,
             validation = (X_dev, y_dev),
             callbacks = [
                 callbacks.EarlyStopping(
