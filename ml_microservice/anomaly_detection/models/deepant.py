@@ -31,7 +31,7 @@ def DeepAnT_forecaster(win = 32, maps = 32, kernel = 2, conv_strides = 1,
                 activation = 'relu',
                 padding = 'valid'
             ) (pool)
-            pool = layers.MaxPool1D(pool_size = pool_kernel) (conv)
+            pool = layers.MaxPool1D(pool_size = pool_kernel, padding = "valid") (conv)
         f = layers.Flatten() (pool)
         d = layers.Dense(units = hidden_size, activation = 'relu', kernel_initializer="he_normal") (f)
         d = layers.Dropout(dropout_rate) (d)
