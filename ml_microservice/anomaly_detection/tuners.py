@@ -157,7 +157,7 @@ class DeepAnTTuner(AbstractTuner):
         hb.search(
             X_train, y_train,
             validation_data = (X_dev, y_dev),
-            max_epochs = 50,
+            epochs = 50,
             callbacks = [
                 callbacks.EarlyStopping(
                     monitor = 'val_loss',
@@ -280,7 +280,7 @@ class GRUTuner(AbstractTuner):
         hb.search(
             X_train, y_train,
             validation_data = (X_dev, y_dev),
-            max_epochs = 50,
+            epochs = 50,
             callbacks = [
                 callbacks.EarlyStopping(
                     monitor = 'val_loss',
@@ -404,7 +404,7 @@ class LSTMTuner(AbstractTuner):
         hb.search(
             X_train, y_train,
             validation_data = (X_dev, y_dev),
-            max_epochs = 50,
+            epochs = 50,
             callbacks = [
                 callbacks.EarlyStopping(
                     monitor = 'val_loss',
