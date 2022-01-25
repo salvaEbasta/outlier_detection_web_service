@@ -67,7 +67,10 @@ class GPEvaluator(Evaluator):
         rmse = np.nan
         naive = np.nan
 
-        X_ts = ts.drop(cfg.cols["y"], axis = 1)
+        if cfg.cols["y"] in ts.columns:
+            X_ts = ts.drop(cfg.cols["y"], axis = 1)
+        else:
+            X_ts = ts
         self.prediction_  = model.predict(X_ts)
         y_hat = self.prediction_[cfg.cols["y"]].to_numpy()
         
