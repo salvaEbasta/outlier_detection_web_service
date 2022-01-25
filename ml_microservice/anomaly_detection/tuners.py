@@ -115,7 +115,7 @@ class DeepAnTTuner(AbstractTuner):
             maps = [32, 64], 
             kernel = [2, 3, 4], 
             conv_strides = [1, 2, 4], 
-            pool_kernel = [2, 4], 
+            pool_kernel = [2, ], 
             conv_layers = [2, ], 
             hidden_size = [128, 256, 512],
             dropout_rate = [.2, .4],
