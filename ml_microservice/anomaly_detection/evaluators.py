@@ -51,7 +51,7 @@ class GPEvaluator(Evaluator):
     """
     def __init__(self, env: Environment = None):
         self.env = env
-        self.history = load_history(env.root)
+        self.history = load_history(env.root if env is not None else None)
 
     def save_history(self, path_dir):
         if not os.path.exists(path_dir):
