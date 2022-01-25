@@ -51,7 +51,7 @@ class Preprocessor():
         return tmp[:, :X.size//len(X)].reshape(X.shape), \
             tmp[:, X.size//len(X):].reshape(y.shape)
 
-    def extract_windows(self, data, w, fh=1):
+    def extract_windows(self, data, w, fh = 1):
         total_width = w + fh
         if len(data) < total_width:
             tmp = np.zeros([total_width, ])
@@ -59,11 +59,11 @@ class Preprocessor():
                 tmp[len(tmp) - len(data) + i] = data[i]
             data = tmp
         total_windows = len(data) - total_width + 1
-        X = np.empty([total_windows, self.input_width])
-        y = np.empty([total_windows, self.label_width])
+        X = np.empty([total_windows, w])
+        y = np.empty([total_windows, fh])
         for i in range(total_windows):
-            X[i] = data[i : i + self.input_width]
-            y[i] = data[i + self.input_width : i + total_width]
+            X[i] = data[i : i + w]
+            y[i] = data[i + w : i + total_width]
         return X, y
     
     def augment_dataset(self, X, y):
