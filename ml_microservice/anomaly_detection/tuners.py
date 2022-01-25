@@ -153,7 +153,7 @@ class DeepAnTTuner(AbstractTuner):
                 ),
             )
 
-        hb = Hyperband(hypermodel, factor = 5, seed = 42)
+        hb = Hyperband(hypermodel, factor = 5, seed = 42, project_name = "deepant", overwrite = True)
         hb.search(
             X_train, y_train,
             validation_data = (X_dev, y_dev),
@@ -276,7 +276,7 @@ class GRUTuner(AbstractTuner):
                 ),
             )
 
-        hb = Hyperband(hypermodel, factor = 5, seed = 42)
+        hb = Hyperband(hypermodel, factor = 5, seed = 42, project_name = "gru", overwrite = True)
         hb.search(
             X_train, y_train,
             validation_data = (X_dev, y_dev),
@@ -400,7 +400,7 @@ class LSTMTuner(AbstractTuner):
                 ),
             )
 
-        hb = Hyperband(hypermodel, factor = 5, seed = 42)
+        hb = Hyperband(hypermodel, factor = 5, seed = 42, project_name = "lstm", overwrite = True)
         hb.search(
             X_train, y_train,
             validation_data = (X_dev, y_dev),
