@@ -111,7 +111,7 @@ class WindGaussTuner(AbstractTuner):
 class DeepAnTTuner(AbstractTuner):
     def __init__(self):
         super().__init__(search_space = dict(
-            win = [26, ], 
+            win = [52, ], 
             maps = [32, 64, ], 
             kernel = [2, 3, 4], 
             conv_strides = [1, 2, ], 
