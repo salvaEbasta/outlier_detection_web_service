@@ -58,12 +58,12 @@ class Preprocessor():
             for i in range(len(data)):
                 tmp[len(tmp) - len(data) + i] = data[i]
             data = tmp
-        total_windows = len(data) - self.total_width + 1
+        total_windows = len(data) - total_width + 1
         X = np.empty([total_windows, self.input_width])
         y = np.empty([total_windows, self.label_width])
         for i in range(total_windows):
             X[i] = data[i : i + self.input_width]
-            y[i] = data[i + self.input_width : i + self.total_width]
+            y[i] = data[i + self.input_width : i + total_width]
         return X, y
     
     def augment_dataset(self, X, y):
