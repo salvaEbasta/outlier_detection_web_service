@@ -113,7 +113,7 @@ class DeepAnTTuner(AbstractTuner):
         super().__init__(search_space = dict(
             win = [52, ], 
             maps = [32, 64, ], 
-            kernel = [2, 3, 4], 
+            kernel = [2, 4, ], 
             conv_strides = [1, 2, ], 
             pool_kernel = [2, ], 
             conv_layers = [2, ], 
@@ -150,6 +150,7 @@ class DeepAnTTuner(AbstractTuner):
                     "dropout_rate", 
                     min_value = self.search_space["dropout_rate"][0],
                     max_value = self.search_space["dropout_rate"][1],
+                    step = 0.25,
                 ),
             )
 
@@ -160,11 +161,11 @@ class DeepAnTTuner(AbstractTuner):
         hb.search(
             X_train, y_train,
             validation_data = (X_dev, y_dev),
-            epochs = 25,
+            epochs = 20,
             callbacks = [
                 callbacks.EarlyStopping(
                     monitor = 'val_loss',
-                    patience = 5,
+                    patience = 3,
                 ), ]
         )
         best_hps = hb.get_best_hyperparameters()[0]
@@ -175,12 +176,12 @@ class DeepAnTTuner(AbstractTuner):
         history = forecaster.fit(
             X_train, y_train, 
             batch_size = 2,
-            epochs = 25,
+            epochs = 20,
             validation = (X_dev, y_dev),
             callbacks = [
                 callbacks.EarlyStopping(
                     monitor = 'val_loss',
-                    patience = 5,
+                    patience = 3,
                 ), ]
         )
         
@@ -260,22 +261,26 @@ class GRUTuner(AbstractTuner):
                     "dropout1", 
                     min_value = self.search_space["dropout1"][0],
                     max_value = self.search_space["dropout1"][1],
+                    step = 0.25,
                 ),
                 rec_dropout1 = hp.Float(
                     "rec_dropout1", 
                     min_value = self.search_space["rec_dropout1"][0],
                     max_value = self.search_space["rec_dropout1"][1],
+                    step = 0.25,
                 ),
                 size2 = hp.Choice("size1", values = self.search_space["size2"]),
                 dropout2 = hp.Float(
                     "dropout2", 
                     min_value = self.search_space["dropout2"][0],
                     max_value = self.search_space["dropout2"][1],
+                    step = 0.25,
                 ),
                 rec_dropout2 = hp.Float(
                     "rec_dropout2", 
                     min_value = self.search_space["rec_dropout2"][0],
                     max_value = self.search_space["rec_dropout2"][1],
+                    step = 0.25,
                 ),
             )
 
@@ -286,11 +291,11 @@ class GRUTuner(AbstractTuner):
         hb.search(
             X_train, y_train,
             validation_data = (X_dev, y_dev),
-            epochs = 25,
+            epochs = 20,
             callbacks = [
                 callbacks.EarlyStopping(
                     monitor = 'val_loss',
-                    patience = 5,
+                    patience = 3,
                 ), ]
         )
         best_hps = hb.get_best_hyperparameters()[0]
@@ -301,12 +306,12 @@ class GRUTuner(AbstractTuner):
         history = forecaster.fit(
             X_train, y_train, 
             batch_size = 2,
-            epochs = 25,
+            epochs = 20,
             validation = (X_dev, y_dev),
             callbacks = [
                 callbacks.EarlyStopping(
                     monitor = 'val_loss',
-                    patience = 5,
+                    patience = 3,
                 ), ]
         )
         
@@ -387,22 +392,26 @@ class LSTMTuner(AbstractTuner):
                     "dropout1", 
                     min_value = self.search_space["dropout1"][0],
                     max_value = self.search_space["dropout1"][1],
+                    step = 0.25,
                 ),
                 rec_dropout1 = hp.Float(
                     "rec_dropout1", 
                     min_value = self.search_space["rec_dropout1"][0],
                     max_value = self.search_space["rec_dropout1"][1],
+                    step = 0.25,
                 ),
                 size2 = hp.Choice("size1", values = self.search_space["size2"]),
                 dropout2 = hp.Float(
                     "dropout2", 
                     min_value = self.search_space["dropout2"][0],
                     max_value = self.search_space["dropout2"][1],
+                    step = 0.25,
                 ),
                 rec_dropout2 = hp.Float(
                     "rec_dropout2", 
                     min_value = self.search_space["rec_dropout2"][0],
                     max_value = self.search_space["rec_dropout2"][1],
+                    step = 0.25,
                 ),
             )
 
@@ -413,11 +422,11 @@ class LSTMTuner(AbstractTuner):
         hb.search(
             X_train, y_train,
             validation_data = (X_dev, y_dev),
-            epochs = 25,
+            epochs = 20,
             callbacks = [
                 callbacks.EarlyStopping(
                     monitor = 'val_loss',
-                    patience = 5,
+                    patience = 3,
                 ), ]
         )
         best_hps = hb.get_best_hyperparameters()[0]
@@ -428,12 +437,12 @@ class LSTMTuner(AbstractTuner):
         history = forecaster.fit(
             X_train, y_train, 
             batch_size = 2,
-            epochs = 25,
+            epochs = 20,
             validation = (X_dev, y_dev),
             callbacks = [
                 callbacks.EarlyStopping(
                     monitor = 'val_loss',
-                    patience = 5,
+                    patience = 3,
                 ), ]
         )
         
