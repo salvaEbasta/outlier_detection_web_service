@@ -6,7 +6,7 @@ import pandas as pd
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import f1_score
 from tensorflow.keras import callbacks
-from kerastuner import Hyperband
+from kerastuner import Hyperband, Objective
 
 from . import configuration as cfg
 from .transformers import Preprocessor
@@ -153,7 +153,10 @@ class DeepAnTTuner(AbstractTuner):
                 ),
             )
 
-        hb = Hyperband(hypermodel, factor = 5, seed = 42, project_name = "deepant", overwrite = True)
+        hb = Hyperband(
+            hypermodel, factor = 5, seed = 42, project_name = "deepant", overwrite = True,
+            objective = Objective("val_mean_squared_error", direction="min"),
+        )
         hb.search(
             X_train, y_train,
             validation_data = (X_dev, y_dev),
@@ -276,7 +279,10 @@ class GRUTuner(AbstractTuner):
                 ),
             )
 
-        hb = Hyperband(hypermodel, factor = 5, seed = 42, project_name = "gru", overwrite = True)
+        hb = Hyperband(
+            hypermodel, factor = 5, seed = 42, project_name = "gru", overwrite = True,
+            objective = Objective("val_mean_squared_error", direction="min"),
+        )
         hb.search(
             X_train, y_train,
             validation_data = (X_dev, y_dev),
@@ -400,7 +406,10 @@ class LSTMTuner(AbstractTuner):
                 ),
             )
 
-        hb = Hyperband(hypermodel, factor = 5, seed = 42, project_name = "lstm", overwrite = True)
+        hb = Hyperband(
+            hypermodel, factor = 5, seed = 42, project_name = "lstm", overwrite = True,
+            objective = Objective("val_mean_squared_error", direction="min"),
+        )
         hb.search(
             X_train, y_train,
             validation_data = (X_dev, y_dev),
