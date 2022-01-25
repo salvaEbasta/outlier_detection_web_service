@@ -130,7 +130,7 @@ class DeepAnTTuner(AbstractTuner):
         # tune forecaster
         X, y = pre.extract_windows(
             ts[cfg.cols["X"]].copy().to_numpy(), 
-            w = self.win
+            w = self.search_space["win"]
         )
         X_train, X_dev = pre.train_test_split(X)
         y_train, y_dev = pre.train_test_split(y)
@@ -242,7 +242,7 @@ class GRUTuner(AbstractTuner):
         # tune forecaster
         X, y = pre.extract_windows(
             ts[cfg.cols["X"]].copy().to_numpy(), 
-            w = self.win
+            w = self.search_space["win"]
         )
         X_train, X_dev = pre.train_test_split(X)
         y_train, y_dev = pre.train_test_split(y)
@@ -366,7 +366,7 @@ class LSTMTuner(AbstractTuner):
         # tune forecaster
         X, y = pre.extract_windows(
             ts[cfg.cols["X"]].copy().to_numpy(), 
-            w = self.win
+            w = self.search_space["win"]
         )
         X_train, X_dev = pre.train_test_split(X)
         y_train, y_dev = pre.train_test_split(y)
