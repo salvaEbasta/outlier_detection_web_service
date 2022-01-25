@@ -111,7 +111,7 @@ class WindGaussTuner(AbstractTuner):
 class DeepAnTTuner(AbstractTuner):
     def __init__(self):
         super().__init__(search_space = dict(
-            win = [16, 32, 64], 
+            win = [13, ], 
             maps = [32, 64], 
             kernel = [2, 3, 4], 
             conv_strides = [1, 2, 4], 
@@ -130,7 +130,7 @@ class DeepAnTTuner(AbstractTuner):
         # tune forecaster
         X, y = pre.extract_windows(
             ts[cfg.cols["X"]].copy().to_numpy(), 
-            w = self.search_space["win"]
+            w = self.search_space["win"][0]
         )
         X_train, X_dev = pre.train_test_split(X)
         y_train, y_dev = pre.train_test_split(y)
@@ -224,7 +224,7 @@ class DeepAnTTuner(AbstractTuner):
 class GRUTuner(AbstractTuner):
     def __init__(self):
         super().__init__(search_space = dict(
-            win = [16, 32, 64], 
+            win = [13, ], 
             size1 = [64, 128, 256],
             dropout1 = [.3, .5],
             rec_dropout1 = [.3, .5],
@@ -242,7 +242,7 @@ class GRUTuner(AbstractTuner):
         # tune forecaster
         X, y = pre.extract_windows(
             ts[cfg.cols["X"]].copy().to_numpy(), 
-            w = self.search_space["win"]
+            w = self.search_space["win"][0]
         )
         X_train, X_dev = pre.train_test_split(X)
         y_train, y_dev = pre.train_test_split(y)
@@ -348,7 +348,7 @@ class GRUTuner(AbstractTuner):
 class LSTMTuner(AbstractTuner):
     def __init__(self):
         super().__init__(search_space = dict(
-            win = [16, 32, 64], 
+            win = [13, ], 
             size1 = [64, 128, 256],
             dropout1 = [.3, .5],
             rec_dropout1 = [.3, .5],
@@ -366,7 +366,7 @@ class LSTMTuner(AbstractTuner):
         # tune forecaster
         X, y = pre.extract_windows(
             ts[cfg.cols["X"]].copy().to_numpy(), 
-            w = self.search_space["win"]
+            w = self.search_space["win"][0]
         )
         X_train, X_dev = pre.train_test_split(X)
         y_train, y_dev = pre.train_test_split(y)
