@@ -111,11 +111,11 @@ class WindGaussTuner(AbstractTuner):
 class DeepAnTTuner(AbstractTuner):
     def __init__(self):
         super().__init__(search_space = dict(
-            win = [13, ], 
+            win = [26, ], 
             maps = [32, 64], 
             kernel = [2, 3, 4], 
             conv_strides = [1, 2, 4], 
-            pool_kernel = [2, ], 
+            pool_kernel = [2, 4, ], 
             conv_layers = [2, ], 
             hidden_size = [128, 256, 512],
             dropout_rate = [.2, .4],
@@ -224,7 +224,7 @@ class DeepAnTTuner(AbstractTuner):
 class GRUTuner(AbstractTuner):
     def __init__(self):
         super().__init__(search_space = dict(
-            win = [13, ], 
+            win = [26, ], 
             size1 = [64, 128, 256],
             dropout1 = [.3, .5],
             rec_dropout1 = [.3, .5],
@@ -348,7 +348,7 @@ class GRUTuner(AbstractTuner):
 class LSTMTuner(AbstractTuner):
     def __init__(self):
         super().__init__(search_space = dict(
-            win = [13, ], 
+            win = [26, ], 
             size1 = [64, 128, 256],
             dropout1 = [.3, .5],
             rec_dropout1 = [.3, .5],
