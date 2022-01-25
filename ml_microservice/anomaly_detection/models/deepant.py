@@ -29,7 +29,7 @@ def DeepAnT_forecaster(win = 32, maps = 32, kernel = 2, conv_strides = 1,
                 kernel_size = kernel,
                 strides = conv_strides, 
                 activation = 'relu',
-                padding = 'valid'
+                padding = "same"
             ) (pool)
             pool = layers.MaxPool1D(pool_size = pool_kernel, padding = "valid") (conv)
         f = layers.Flatten() (pool)
