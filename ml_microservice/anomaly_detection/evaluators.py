@@ -60,18 +60,23 @@ class GPEvaluator(Evaluator):
         self.history.to_csv(h_path, index = False)
     
     def evaluate(self, model, ts):
-        y = ts[cfg.cols["y"]].to_numpy()
-        X_ts = ts.drop(cfg.cols["y"], axis = 1)
-        
-        self.prediction_  = model.predict(X_ts)
-        y_hat = self.prediction_[cfg.cols["y"]].to_numpy()
-        f1 = f1_score(y, y_hat)
-        prec = precision_score(y, y_hat)
-        recall = recall_score(y, y_hat)
-
+        f1 = np.nan
+        prec = np.nan
+        recall = np.nan
         mse = np.nan
         rmse = np.nan
         naive = np.nan
+
+        X_ts = ts.drop(cfg.cols["y"], axis = 1)
+        self.prediction_  = model.predict(X_ts)
+        y_hat = self.prediction_[cfg.cols["y"]].to_numpy()
+        
+        if cfg.cols["y"] in ts.columns:
+            y = ts[cfg.cols["y"]].to_numpy()
+            f1 = f1_score(y, y_hat)
+            prec = precision_score(y, y_hat)
+            recall = recall_score(y, y_hat)
+
         if cfg.cols["forecast"] in self.prediction_.columns:
             forecast_ = self.prediction_[cfg.cols["forecast"]].to_numpy()
             X = X_ts[cfg.cols["X"]].to_numpy()

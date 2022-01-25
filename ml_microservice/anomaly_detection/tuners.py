@@ -68,7 +68,7 @@ class WindGaussTuner(AbstractTuner):
 
     def tune(self, ts):
         if cfg.cols["y"] not in ts:
-            X = ts.drop(cfg.cols["y"], axis = 1)
+            X = ts
             self.best_model_ = WindowedGaussian().fit(X)
             self.best_config_ = self.best_model_.get_params()
             self.best_score_ = -1
