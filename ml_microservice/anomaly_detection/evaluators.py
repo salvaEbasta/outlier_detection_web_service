@@ -14,7 +14,7 @@ from .metrics import naive_metric, naive_prediction
 from . import configuration as cfg
 
 def load_history(path_dir) -> pd.DataFrame:
-    if not os.path.exists(path_dir):
+    if path_dir is None or not os.path.exists(path_dir):
         h = pd.DataFrame()
         h[cfg.cols["timestamp"]] = ""
         h["f1"] = ""
@@ -49,7 +49,7 @@ class GPEvaluator(Evaluator):
     --------------
     Timestamp - MSE - RMSE - NAIVE - F1 - PRECISION - RECALL
     """
-    def __init__(self, env: Environment):
+    def __init__(self, env: Environment = None):
         self.env = env
         self.history = load_history(env.root)
 
