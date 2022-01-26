@@ -137,7 +137,7 @@ class GRU(AnomalyDetector, Forecaster):
         if cfg.cols["timestamp"] in ts.columns:
             residuals[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]]
         residuals[cfg.cols["forecast"]] = y_hat
-        residuals[cfg.cols["residual"]] = y - y_hat
+        residuals[cfg.cols["residual"]] = y.flatten() - y_hat
         return residuals
     
     def save(self, path_dir):

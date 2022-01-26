@@ -155,7 +155,7 @@ class SARIMAX(AnomalyDetector, Forecaster):
         if cfg.cols["timestamp"] in ts.columns:
             residuals[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]]
         residuals[cfg.cols["forecast"]] = y_hat
-        residuals[cfg.cols["residual"]] = X - y_hat
+        residuals[cfg.cols["residual"]] = X - y_hat.to_numpy()
         return residuals
     
     def save(self, path_dir):
