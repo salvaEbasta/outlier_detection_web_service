@@ -571,7 +571,7 @@ class ProphetTuner(AbstractTuner):
                 changepoint_prior_scale = config["changepoint_prior_scale"],
                 seasonality_prior_scale = config["seasonality_prior_scale"]
             )
-            p.fit(prophet_ts, verbose = False)
+            p.fit(prophet_ts)
             future = p.make_future_dataframe(periods = 0, freq = "W")
             prophet_res = p.predict(future)
             y_hat = prophet_res["yhat"].to_numpy()

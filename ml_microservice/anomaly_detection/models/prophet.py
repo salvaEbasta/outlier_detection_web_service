@@ -41,7 +41,7 @@ class Prophet(AnomalyDetector, Forecaster):
             changepoint_prior_scale = self.changepoint_prior_scale,
             seasonality_prior_scale = self.seasonality_prior_scale
         )
-        self.forecaster.fit(prophet_ts, verbose = False)
+        self.forecaster.fit(prophet_ts)
         future = self.forecaster.make_future_dataframe(periods = 0, freq = "W")
         prophet_res = self.forecaster.predict(future)
 
