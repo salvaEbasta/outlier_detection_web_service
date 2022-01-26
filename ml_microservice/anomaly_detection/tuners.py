@@ -261,26 +261,26 @@ class GRUTuner(AbstractTuner):
                     "dropout1", 
                     min_value = self.search_space["dropout1"][0],
                     max_value = self.search_space["dropout1"][1],
-                    step = 0.25,
+                    step = 0.5,
                 ),
                 rec_dropout1 = hp.Float(
                     "rec_dropout1", 
                     min_value = self.search_space["rec_dropout1"][0],
                     max_value = self.search_space["rec_dropout1"][1],
-                    step = 0.25,
+                    step = 0.5,
                 ),
                 size2 = hp.Choice("size1", values = self.search_space["size2"]),
                 dropout2 = hp.Float(
                     "dropout2", 
                     min_value = self.search_space["dropout2"][0],
                     max_value = self.search_space["dropout2"][1],
-                    step = 0.25,
+                    step = 0.5,
                 ),
                 rec_dropout2 = hp.Float(
                     "rec_dropout2", 
                     min_value = self.search_space["rec_dropout2"][0],
                     max_value = self.search_space["rec_dropout2"][1],
-                    step = 0.25,
+                    step = 0.5,
                 ),
             )
 
@@ -392,26 +392,26 @@ class LSTMTuner(AbstractTuner):
                     "dropout1", 
                     min_value = self.search_space["dropout1"][0],
                     max_value = self.search_space["dropout1"][1],
-                    step = 0.25,
+                    step = 0.5,
                 ),
                 rec_dropout1 = hp.Float(
                     "rec_dropout1", 
                     min_value = self.search_space["rec_dropout1"][0],
                     max_value = self.search_space["rec_dropout1"][1],
-                    step = 0.25,
+                    step = 0.5,
                 ),
                 size2 = hp.Choice("size1", values = self.search_space["size2"]),
                 dropout2 = hp.Float(
                     "dropout2", 
                     min_value = self.search_space["dropout2"][0],
                     max_value = self.search_space["dropout2"][1],
-                    step = 0.25,
+                    step = 0.5,
                 ),
                 rec_dropout2 = hp.Float(
                     "rec_dropout2", 
                     min_value = self.search_space["rec_dropout2"][0],
                     max_value = self.search_space["rec_dropout2"][1],
-                    step = 0.25,
+                    step = 0.5,
                 ),
             )
 
