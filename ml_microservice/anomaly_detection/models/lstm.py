@@ -112,7 +112,7 @@ class LSTM(AnomalyDetector, Forecaster):
     
     def predict_proba(self, ts):
         residuals = self.forecast(ts)
-        residuals[cfg.cols["X"]] = residuals[cfg.cols["residuals"]]
+        residuals[cfg.cols["X"]] = residuals[cfg.cols["residual"]]
         predict_proba = self.classifier.predict_proba(residuals)
         
         predict_proba[cfg.cols["X"]] = ts[cfg.cols["X"]]
