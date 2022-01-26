@@ -121,6 +121,17 @@ class WindowedGaussian(AnomalyDetector):
         res[cfg.cols["pred_prob"]] = np.array(anomaly_scores)
         return res
     
+    def predict(self, ts):
+        pp = self.predict_proba(ts)
+        pp[cfg.cols["y"]] = np.array(
+            np.greater(
+                pp[cfg.cols["pred_prob"]].to_numpy(), 
+                self.t
+            ), 
+            dtype = int
+        )
+        return pp
+
     def fit_predict(self, ts):
         self.window_ = []
         self.buffer_ = []

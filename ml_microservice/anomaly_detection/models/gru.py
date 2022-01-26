@@ -122,6 +122,18 @@ class GRU(AnomalyDetector, Forecaster):
         predict_proba[cfg.cols["forecast"]] = residuals[cfg.cols["forecast"]]
         return predict_proba
     
+    def predict(self, ts):
+        residuals = self.forecast(ts)
+        residuals[cfg.cols["X"]] = residuals[cfg.cols["residual"]]
+        prediction = self.classifier.predict(residuals)
+        
+        prediction[cfg.cols["X"]] = ts[cfg.cols["X"]]
+        if cfg.cols["timestamp"] in ts.columns:
+            if cfg.cols["timestamp"] not in prediction.columns:
+                prediction[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]]
+        prediction[cfg.cols["forecast"]] = residuals[cfg.cols["forecast"]]
+        return prediction
+
     def forecast(self, ts):
         pre = Preprocessor(ts)
         ts = pre.nan_filled

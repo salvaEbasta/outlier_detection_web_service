@@ -90,6 +90,18 @@ class Prophet(AnomalyDetector, Forecaster):
         residuals[cfg.cols["residual"]] = X - y_hat
         return residuals
     
+    def predict(self, ts):
+        residuals = self.forecast(ts)
+        residuals[cfg.cols["X"]] = residuals[cfg.cols["residual"]]
+        prediction = self.classifier.predict(residuals)
+        
+        prediction[cfg.cols["X"]] = ts[cfg.cols["X"]]
+        if cfg.cols["timestamp"] in ts.columns:
+            if cfg.cols["timestamp"] not in prediction.columns:
+                prediction[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]]
+        prediction[cfg.cols["forecast"]] = residuals[cfg.cols["forecast"]]
+        return prediction
+
     def save(self, path_dir):
         if not os.path.exists(path_dir):
             os.makedirs(path_dir)
