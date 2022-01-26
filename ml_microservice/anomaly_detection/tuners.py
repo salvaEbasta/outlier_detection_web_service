@@ -502,7 +502,8 @@ class SARIMAXTuner(AbstractTuner):
         if cfg.cols["y"] in ts.columns:
             X = ts.drop(cfg.cols["y"], axis = 1)
         self.best_model_ = sarimax.SARIMAX().fit(X)
-        y_hat = self.best_model_.forecaster.predict(ts[cfg.cols["X"]]).to_numpy()
+        #predict: ts[cfg.cols["X"]]
+        y_hat = self.best_model_.forecaster.predict().to_numpy()
         score = mean_squared_error(
             X[cfg.cols["X"]].to_numpy(), 
             y_hat, 
