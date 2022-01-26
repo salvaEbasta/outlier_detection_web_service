@@ -177,7 +177,7 @@ class DeepAnTTuner(AbstractTuner):
             X_train, y_train, 
             batch_size = 2,
             epochs = 20,
-            validation = (X_dev, y_dev),
+            validation_data = (X_dev, y_dev),
             callbacks = [
                 callbacks.EarlyStopping(
                     monitor = 'val_loss',
@@ -307,7 +307,7 @@ class GRUTuner(AbstractTuner):
             X_train, y_train, 
             batch_size = 2,
             epochs = 20,
-            validation = (X_dev, y_dev),
+            validation_data = (X_dev, y_dev),
             callbacks = [
                 callbacks.EarlyStopping(
                     monitor = 'val_loss',
@@ -438,7 +438,7 @@ class LSTMTuner(AbstractTuner):
             X_train, y_train, 
             batch_size = 2,
             epochs = 20,
-            validation = (X_dev, y_dev),
+            validation_data = (X_dev, y_dev),
             callbacks = [
                 callbacks.EarlyStopping(
                     monitor = 'val_loss',
