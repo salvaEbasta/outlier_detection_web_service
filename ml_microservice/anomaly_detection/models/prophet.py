@@ -52,11 +52,12 @@ class Prophet(AnomalyDetector, Forecaster):
         )
         self.forecaster.fit(prophet_ts)
         #future = self.forecaster.make_future_dataframe(periods = 0, freq = "W")
-        future = make_future_dataframe(
-            periods = len(ts), 
-            start_date = ts[cfg.cols["timestamp"]].min(), 
-            freq = "W"
-        )
+        #future = make_future_dataframe(
+        #    periods = len(ts), 
+        #    start_date = ts[cfg.cols["timestamp"]].min(), 
+        #    freq = "W"
+        #)
+        future = pd.DataFrame({"ds": ts[cfg.cols["timestamp"]]})
         prophet_res = self.forecaster.predict(future)
 
         y_hat = prophet_res["yhat"].to_numpy()
