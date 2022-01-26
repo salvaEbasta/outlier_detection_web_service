@@ -124,7 +124,7 @@ class DeepAnTTuner(AbstractTuner):
         ))
     
     def tune(self, ts):
-        self.explored_cfgs_ = []
+        self.explored_cfgs_ = {}
         pre = Preprocessor(ts)
         ts = pre.nan_filled
         # tune forecaster
