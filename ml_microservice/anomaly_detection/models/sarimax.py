@@ -159,8 +159,10 @@ class SARIMAX(AnomalyDetector, Forecaster):
         pre = Preprocessor(ts)
         ts = pre.nan_filled
         X = ts[cfg.cols["X"]].copy().to_numpy()
-        
-        y_hat = self.forecaster.forecast(steps = len(ts))
+        exo = get_exogenous(
+            pd.DatetimeIndex(ts[cfg.cols["timestamp"]])
+        )
+        y_hat = self.forecaster.forecast(steps = len(ts), exog = exo)
 
         residuals = pd.DataFrame()
         residuals[cfg.cols["X"]] = ts[cfg.cols["X"]]
