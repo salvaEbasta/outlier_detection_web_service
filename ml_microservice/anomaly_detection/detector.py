@@ -89,10 +89,11 @@ class BaseEstimator:
         for key, value in params.items():
             key, delim, sub_key = key.partition('__')
             if key not in valid_params:
-                raise ValueError('Invalid parameter %s for estimator %s. '
-                                 'Check the list of available parameters '
-                                 'with `estimator.get_params().keys()`.' %
-                                 (key, self))
+                continue
+                #raise ValueError('Invalid parameter %s for estimator %s. '
+                #                 'Check the list of available parameters '
+                #                 'with `estimator.get_params().keys()`.' %
+                #                 (key, self))
 
             if delim:
                 nested_params[key][sub_key] = value
