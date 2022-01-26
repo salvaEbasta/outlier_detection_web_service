@@ -38,7 +38,7 @@ class AbstractTuner(Tuner):
         self.explored_cfgs_ = []
     
     def set_space(self, configs):
-        for k, v in configs:
+        for k, v in configs.items():
             if k in self._search_space:
                 self._search_space[k] = v
 
