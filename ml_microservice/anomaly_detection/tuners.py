@@ -563,15 +563,15 @@ class ProphetTuner(AbstractTuner):
         prophet_configs = [dict(zip(prophet_space.keys(), v)) 
                             for v in itertools.product(*prophet_space.values())]
         
-        prophet_ts = pd.DataFrame()
-        prophet_ts[cfg.prophet["timestamp"]] = ts[cfg.cols["timestamp"]]
-        prophet_ts[cfg.prophet["value"]] = ts[cfg.cols["X"]]
+        #prophet_ts = pd.DataFrame()
+        #prophet_ts[cfg.prophet["timestamp"]] = ts[cfg.cols["timestamp"]]
+        #prophet_ts[cfg.prophet["value"]] = ts[cfg.cols["X"]]
         for config in prophet_configs:
             p = prophet.Prophet(
                 changepoint_prior_scale = config["changepoint_prior_scale"],
                 seasonality_prior_scale = config["seasonality_prior_scale"]
             )
-            p.fit(prophet_ts)
+            p.fit(ts)
             future = p.make_future_dataframe(periods = 0, freq = "W")
             prophet_res = p.predict(future)
             y_hat = prophet_res["yhat"].to_numpy()
