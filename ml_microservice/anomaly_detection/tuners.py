@@ -572,7 +572,11 @@ class ProphetTuner(AbstractTuner):
                 seasonality_prior_scale = config["seasonality_prior_scale"]
             )
             p.fit(ts)
-            future = p.make_future_dataframe(periods = 0, freq = "W")
+            future = prophet.make_future_dataframe(
+                periods = len(ts), 
+                start_date = ts[cfg.cols["timestamp"]].min(),
+                freq = "W"
+            )
             prophet_res = p.predict(future)
             y_hat = prophet_res["yhat"].to_numpy()
 

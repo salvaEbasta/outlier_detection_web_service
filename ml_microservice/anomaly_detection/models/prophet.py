@@ -3,7 +3,7 @@ import joblib
 import json
 import os
 
-#import numpy as np
+import numpy as np
 import pandas as pd
 import prophet
 
@@ -11,6 +11,15 @@ from .. import configuration as cfg
 from ..transformers import Preprocessor
 from ..detector import AnomalyDetector, Forecaster
 from .windowed_gaussian import WindowedGaussian
+
+def make_future_dataframe(periods, start_date, freq='D'):
+    dates = pd.date_range(
+        start = start_date,
+        periods = periods + 1,
+        freq = freq)
+    #dates = dates[dates > start_date]
+    dates = dates[:periods]
+    return pd.DataFrame({'ds': dates})
 
 class Prophet(AnomalyDetector, Forecaster):
     def __init__(self, gauss_win = 32, gauss_step = 16, 
@@ -42,11 +51,16 @@ class Prophet(AnomalyDetector, Forecaster):
             seasonality_prior_scale = self.seasonality_prior_scale
         )
         self.forecaster.fit(prophet_ts)
-        future = self.forecaster.make_future_dataframe(periods = 0, freq = "W")
+        #future = self.forecaster.make_future_dataframe(periods = 0, freq = "W")
+        future = make_future_dataframe(
+            periods = len(ts), 
+            start_date = ts[cfg.cols["timestamp"]].min(), 
+            freq = "W"
+        )
         prophet_res = self.forecaster.predict(future)
 
         y_hat = prophet_res["yhat"].to_numpy()
-        print(f"y_hat: {y_hat}")
+        #print(f"y_hat: {y_hat}")
         
         residuals = pd.DataFrame()
         residuals[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]]
