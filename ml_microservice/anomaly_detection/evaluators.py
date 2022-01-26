@@ -8,6 +8,7 @@ from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import mean_squared_error
 
+from .transformers import Preprocessor
 from ml_microservice.logic.detector_lib import Environment
 from .metrics import naive_metric, naive_prediction
 
@@ -82,6 +83,9 @@ class GPEvaluator(Evaluator):
 
         if cfg.cols["forecast"] in self.prediction_.columns:
             forecast_ = self.prediction_[cfg.cols["forecast"]].to_numpy()
+
+            pre = Preprocessor(X_ts)
+            X_ts = pre.nan_filled
             X = X_ts[cfg.cols["X"]].to_numpy()
             mse = mean_squared_error(X, forecast_)
             rmse = mean_squared_error(X, forecast_, squared = False)
