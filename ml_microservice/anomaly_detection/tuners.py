@@ -111,7 +111,7 @@ class WindGaussTuner(AbstractTuner):
 class DeepAnTTuner(AbstractTuner):
     def __init__(self):
         super().__init__(search_space = dict(
-            win = [52, ], 
+            win = [26, ], 
             maps = [32, 64, ], 
             kernel = [2, 4, ], 
             conv_strides = [1, 2, ], 
@@ -150,12 +150,12 @@ class DeepAnTTuner(AbstractTuner):
                     "dropout_rate", 
                     min_value = self.search_space["dropout_rate"][0],
                     max_value = self.search_space["dropout_rate"][1],
-                    step = 0.25,
+                    step = 0.5,
                 ),
             )
 
         hb = Hyperband(
-            hypermodel, factor = 5, seed = 42, project_name = "deepant", overwrite = True,
+            hypermodel, factor = 3, seed = 42, project_name = "deepant", overwrite = True,
             objective = Objective("val_loss", direction="min"),
         )
         hb.search(
@@ -285,7 +285,7 @@ class GRUTuner(AbstractTuner):
             )
 
         hb = Hyperband(
-            hypermodel, factor = 5, seed = 42, project_name = "gru", overwrite = True,
+            hypermodel, factor = 3, seed = 42, project_name = "gru", overwrite = True,
             objective = Objective("val_loss", direction="min"),
         )
         hb.search(
@@ -416,7 +416,7 @@ class LSTMTuner(AbstractTuner):
             )
 
         hb = Hyperband(
-            hypermodel, factor = 5, seed = 42, project_name = "lstm", overwrite = True,
+            hypermodel, factor = 3, seed = 42, project_name = "lstm", overwrite = True,
             objective = Objective("val_loss", direction="min"),
         )
         hb.search(
