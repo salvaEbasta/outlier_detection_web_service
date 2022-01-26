@@ -116,7 +116,7 @@ class SARIMAX(AnomalyDetector, Forecaster):
             ).fit()
 
         y_hat = self.forecaster.predict().to_numpy()
-        print(f"y_hat: {y_hat}")
+        #print(f"y_hat: {y_hat}")
         
         residuals = pd.DataFrame()
         residuals[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]]
