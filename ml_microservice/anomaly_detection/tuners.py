@@ -90,7 +90,7 @@ class WindGaussTuner(AbstractTuner):
         
         for config in configs:
             current = WindowedGaussian()
-            current.set_params(config)
+            current.set_params(**config)
             current.fit(X)
             y_hat = current.predict(X)
             score = f1_score(y, y_hat[cfg.cols["y"]].to_numpy())
@@ -217,7 +217,7 @@ class DeepAnTTuner(AbstractTuner):
         model = deepant.DeepAnT()
         self.best_config_["gauss_win"] = wgTuner.best_config_["w"]
         self.best_config_["gauss_step"] = wgTuner.best_config_["step"]
-        model.set_params(self.best_config_)
+        model.set_params(**self.best_config_)
         model.forecaster = self.forecaster
         model.classifier = self.classifier
         model.preload = self.preload
@@ -348,7 +348,7 @@ class GRUTuner(AbstractTuner):
         model = gru.GRU()
         self.best_config_["gauss_win"] = wgTuner.best_config_["w"]
         self.best_config_["gauss_step"] = wgTuner.best_config_["step"]
-        model.set_params(self.best_config_)
+        model.set_params(**self.best_config_)
         model.forecaster = self.forecaster
         model.classifier = self.classifier
         model.preload = self.preload
@@ -478,7 +478,7 @@ class LSTMTuner(AbstractTuner):
         model = lstm.LSTM()
         self.best_config_["gauss_win"] = wgTuner.best_config_["w"]
         self.best_config_["gauss_step"] = wgTuner.best_config_["step"]
-        model.set_params(self.best_config_)
+        model.set_params(**self.best_config_)
         model.forecaster = self.forecaster
         model.classifier = self.classifier
         model.preload = self.preload
@@ -608,7 +608,7 @@ class ProphetTuner(AbstractTuner):
         self.best_config_["gauss_step"] = wgTuner.best_config_["step"]
 
         model = prophet.Prophet()
-        model.set_params(self.best_config_)
+        model.set_params(**self.best_config_)
         model.forecaster = self.forecaster
         model.classifier = self.classifier
         self.best_model_ = model

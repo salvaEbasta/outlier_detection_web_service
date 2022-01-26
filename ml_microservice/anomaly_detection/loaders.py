@@ -57,7 +57,7 @@ class DeepAnTLoader(Loader):
         params_path = os.path.join(path, self.params_file)
         with open(params_path, "r") as f:
             params = json.load(params_path)
-        d.set_params(params)
+        d.set_params(**params)
 
         preload_path = os.path.join(path, self.preload_file)
         with open(preload_path, "r") as f:
@@ -96,7 +96,7 @@ class GRULoader(Loader):
         params_path = os.path.join(path, self.params_file)
         with open(params_path, "r") as f:
             params = json.load(params_path)
-        gru.set_params(params)
+        gru.set_params(**params)
 
         preload_path = os.path.join(path, self.preload_file)
         with open(preload_path, "r") as f:
@@ -135,7 +135,7 @@ class LSTMLoader(Loader):
         params_path = os.path.join(path, self.params_file)
         with open(params_path, "r") as f:
             params = json.load(params_path)
-        lstm.set_params(params)
+        lstm.set_params(**params)
 
         preload_path = os.path.join(path, self.preload_file)
         with open(preload_path, "r") as f:
@@ -175,7 +175,7 @@ class SARIMAXLoader(Loader):
         params_path = os.path.join(path, self.params_file)
         with open(params_path, "r") as f:
             params = json.load(params_path)
-        sarimax.set_params(params)
+        sarimax.set_params(**params)
 
         classifier_path = os.path.join(path, self.classifier_dir)
         wgLoader = WindGaussLoader()
@@ -212,7 +212,7 @@ class ProphetLoader(Loader):
         params_path = os.path.join(path, self.params_file)
         with open(params_path, "r") as f:
             params = json.load(params_path)
-        prophet.set_params(params)
+        prophet.set_params(**params)
 
         classifier_path = os.path.join(path, self.classifier_dir)
         wgLoader = WindGaussLoader()
