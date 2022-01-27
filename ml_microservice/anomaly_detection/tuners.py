@@ -581,7 +581,7 @@ class ProphetTuner(AbstractTuner):
             y_hat = prophet_res[cfg.cols["forecast"]].to_numpy()
 
             score = mean_squared_error(
-                ts[cfg.cols["X"]].to_numpy(), 
+                Preprocessor(ts).nan_filled[cfg.cols["X"]].to_numpy(), 
                 y_hat,
                 squared = False
             )
