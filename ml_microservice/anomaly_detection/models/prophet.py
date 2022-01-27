@@ -93,7 +93,8 @@ class Prophet(AnomalyDetector, Forecaster):
         ts = pre.nan_filled
         X = ts[cfg.cols["X"]].copy().to_numpy()
         
-        future = self.forecaster.make_future_dataframe(periods = len(ts), freq = "W")
+        #future = self.forecaster.make_future_dataframe(periods = len(ts), freq = "W")
+        future = pd.DataFrame({"ds": ts[cfg.cols["timestamp"]]})
         prophet_res = self.forecaster.predict(future)
         y_hat = prophet_res["yhat"].to_numpy()
 
