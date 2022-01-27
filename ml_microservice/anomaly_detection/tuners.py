@@ -578,8 +578,7 @@ class ProphetTuner(AbstractTuner):
             #    freq = "W"
             #)
             prophet_res = p.predict(ts)
-            print(prophet_res, type(prophet_res), prophet_res.columns)
-            y_hat = prophet_res["yhat"].to_numpy()
+            y_hat = prophet_res[cfg.cols["forecast"]].to_numpy()
 
             score = mean_squared_error(
                 ts[cfg.cols["X"]].to_numpy(), 
