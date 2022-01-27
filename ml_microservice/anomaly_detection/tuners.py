@@ -592,7 +592,7 @@ class ProphetTuner(AbstractTuner):
             
             if score < self.forecaster_score:
                 self.forecaster_score = score
-                self.forecaster = p
+                self.forecaster = p.forecaster
                 self.forecaster_config = config
         
         wgTuner = WindGaussTuner()
