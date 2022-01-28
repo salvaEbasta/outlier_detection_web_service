@@ -501,7 +501,6 @@ class SARIMAXTuner(AbstractTuner):
         X = ts
         if cfg.cols["y"] in ts.columns:
             X = ts.drop(cfg.cols["y"], axis = 1)
-        print(X["timestamp"])
         self.best_model_ = sarimax.SARIMAX().fit(X)
         #predict: ts[cfg.cols["X"]]
         y_hat = self.best_model_.forecaster.predict().to_numpy()
