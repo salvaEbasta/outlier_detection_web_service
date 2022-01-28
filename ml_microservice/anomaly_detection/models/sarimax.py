@@ -62,9 +62,11 @@ class SARIMAX(AnomalyDetector, Forecaster):
         #tmp = tmp[cfg.cols["X"]]
 
         endo = ts[cfg.cols["X"]]
+        print(endo)
         exo = get_exogenous(
             pd.DatetimeIndex(ts[cfg.cols["timestamp"]])
         )#.drop("Intercept", axis = 1, errors = 'ignore')
+        print(exo)
         s, m = get_seasonality(endo.to_numpy())
 
         #order
