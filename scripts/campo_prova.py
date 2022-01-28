@@ -88,12 +88,9 @@ ts["timestamp"] = pd.to_datetime(ts["timestamp"])
 ml_path = ".."
 if ml_path not in sys.path:
     sys.path.append(ml_path)
-from ml_microservice.anomaly_detection.models.sarimax import SARIMAX
-s = SARIMAX()
-s.fit(ts)
-s.predict(ts)
+from ml_microservice.anomaly_detection.models.sarimax import SARIMAX, get_exogenous
 
-# %%
-import prophet
+exo = get_exogenous(pd.DatetimeIndex(ts["timestamp"]))
+exo
 
 # %%

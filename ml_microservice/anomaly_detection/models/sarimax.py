@@ -21,12 +21,12 @@ def get_exogenous(datetimeIDX, date_format = "%Y-%m-%d %H:%M:%S"):
                         'week_of_year': datetimeIDX.isocalendar().week,
                         #'hour_of_day': data.index.hour.astype('category'),
                         #'Intercept': np.ones_like(datetimeIDX),
-                    }, 
-                    index = range(len(datetimeIDX))
+                    }
                 )
-            )
+            ).astype('float64')
         #, index=datetimeIDX))
-    return X.astype('float64')
+    X.index = range(len(datetimeIDX))
+    return X
 
 def get_seasonality(X, period = "W"):
     #fs, P = signal.periodogram(X)
