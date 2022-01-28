@@ -28,14 +28,16 @@ def get_exogenous(datetimeIDX, date_format = "%Y-%m-%d %H:%M:%S"):
         #, index=datetimeIDX))
     return X.astype('float64')
 
-def get_seasonality(X):
-    fs, P = signal.periodogram(X)
-    f = fs[np.argmax(P)]
-    p = int(1 / (f + np.finfo(float).eps))
-    print(f"Period: {p}")
-    if p == X.shape[0]:
-        return False, 1
-    return True, p
+def get_seasonality(X, period = "W"):
+    #fs, P = signal.periodogram(X)
+    #f = fs[np.argmax(P)]
+    #p = int(1 / (f + np.finfo(float).eps))
+    #print(f"Period: {p}")
+    #if p == X.shape[0]:
+    #    return False, 1
+    #return True, p
+    if period == "W":
+        return True, 52
 
 
 class SARIMAX(AnomalyDetector, Forecaster):
