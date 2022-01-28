@@ -18,7 +18,7 @@ def get_exogenous(datetimeIDX, date_format = "%Y-%m-%d %H:%M:%S"):
         X = pd.get_dummies(
                 pd.DataFrame(
                     {
-                        'day_of_week': datetimeIDX.dayofweek.astype('category'),
+                        'week_of_year': datetimeIDX.isocalendar().week,
                         #'hour_of_day': data.index.hour.astype('category'),
                         #'Intercept': np.ones_like(datetimeIDX),
                     }, 
@@ -43,7 +43,7 @@ def get_seasonality(X, period = "W"):
 class SARIMAX(AnomalyDetector, Forecaster):
     def __init__(
         self, gauss_win = 32, gauss_step = 16, order = [0,0,0],
-        seasonal_order = [0,0,0],
+        seasonal_order = [0,0,0,0],
     ):
         args, _, _, values = inspect.getargvalues(inspect.currentframe())
         values.pop("self")
@@ -62,7 +62,6 @@ class SARIMAX(AnomalyDetector, Forecaster):
         #tmp = tmp[cfg.cols["X"]]
 
         endo = ts[cfg.cols["X"]]
-        print(endo)
         exo = get_exogenous(
             pd.DatetimeIndex(ts[cfg.cols["timestamp"]])
         )#.drop("Intercept", axis = 1, errors = 'ignore')
