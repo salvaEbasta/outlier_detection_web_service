@@ -41,7 +41,10 @@ def get_seasonality(X, period = "W"):
 
 
 class SARIMAX(AnomalyDetector, Forecaster):
-    def __init__(self, gauss_win = 32, gauss_step = 16):
+    def __init__(
+        self, gauss_win = 32, gauss_step = 16, order = [0,0,0],
+        seasonal_order = [0,0,0],
+    ):
         args, _, _, values = inspect.getargvalues(inspect.currentframe())
         values.pop("self")
         for arg, val in values.items():
