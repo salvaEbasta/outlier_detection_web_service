@@ -21,13 +21,13 @@ class EmpiricalRule(BaseEstimator):
         X = ts[cfg.cols["X"]].to_numpy()
         self.mean_ = np.mean(X) if not self.robust else np.median(X)
         self.var_ = np.var(X)
-        self.std_var_ = sqrt(self.var_)
+        self.std_dev_ = sqrt(self.var_)
         return self
     
     def predict(self, ts):
         if not hasattr(self, "mean_") or \
             not hasattr(self, "var_") or \
-            not hasattr(self, "std_var_"):
+            not hasattr(self, "std_dev_"):
             raise RuntimeError("Need to be fitted first")
 
         X = ts[cfg.cols["X"]].to_numpy()
