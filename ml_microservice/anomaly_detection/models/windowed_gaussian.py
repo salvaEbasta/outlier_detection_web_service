@@ -10,13 +10,13 @@ from .. import configuration as cfg
 from ..transformers import Preprocessor
 from ..detector import AnomalyDetector
 
-def q_function(mean, std_dev, x):
+def q_function(x, mean, std_dev):
     """
     Q-function: https://www.gaussianwaves.com/2012/07/q-function-and-error-functions/
     """
     if x < mean:
         x = 2*mean - x
-        return q_function(mean, std_dev, x)
+        return q_function(x, mean, std_dev)
     z = (x - mean) / (std_dev + np.finfo(float).eps)
     return 0.5 * math.erfc(z / math.sqrt(2))
 
