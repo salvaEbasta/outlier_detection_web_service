@@ -22,6 +22,7 @@ class EmpiricalRule(BaseEstimator):
         self.mean_ = np.mean(X) if not self.robust else np.median(X)
         self.var_ = np.var(X)
         self.std_dev_ = float(np.std(X))
+        print(f"{self.std_dev_}")
         return self
     
     def predict(self, ts):
