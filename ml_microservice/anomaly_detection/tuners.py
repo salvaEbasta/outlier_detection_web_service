@@ -497,12 +497,15 @@ class SARIMAXTuner(AbstractTuner):
             "rmse": score,
         }]
         
+        residuals_ts = pd.DataFrame()
+        residuals_ts[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]][-len(y_hat):]
+        residuals_ts[cfg.cols["X"]] = X[cfg.cols["X"]].to_numpy() - y_hat
         wgTuner = WindGaussTuner()
         wgTuner.set_space({
             "w": self.search_space["gauss_win"],
             "step": self.search_space["gauss_step"],
         })
-        wgTuner.tune(ts)
+        wgTuner.tune(residuals_ts)
         self.classifier = wgTuner.best_model_
         
         self.explored_cfgs_["predictor"] = forecaster_cfgs_
@@ -575,12 +578,16 @@ class ProphetTuner(AbstractTuner):
                 self.forecaster = p.forecaster
                 self.forecaster_config = config
         
+        residuals_ts = pd.DataFrame()
+        residuals_ts[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]][-len(y_hat):]
+        X = Preprocessor(ts).nan_prefilled
+        residuals_ts[cfg.cols["X"]] = X[cfg.cols["X"]].to_numpy() - y_hat
         wgTuner = WindGaussTuner()
         wgTuner.set_space({
             "w": self.search_space["gauss_win"],
             "step": self.search_space["gauss_step"],
         })
-        wgTuner.tune(ts)
+        wgTuner.tune(residuals_ts)
         self.classifier = wgTuner.best_model_
         
         self.explored_cfgs_["predictor"] = forecaster_cfgs_
