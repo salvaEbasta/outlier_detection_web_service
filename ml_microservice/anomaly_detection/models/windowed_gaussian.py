@@ -29,7 +29,7 @@ class WindowedGaussian(AnomalyDetector):
         self.w = w
         self.step = step
 
-        self.t = 0.75
+        self.t = .95
 
     def fit(self, ts):
         p = Preprocessor(ts)
