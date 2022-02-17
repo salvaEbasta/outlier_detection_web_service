@@ -13,7 +13,7 @@ from tensorflow.keras import callbacks
 from .. import configuration as cfg
 from ..transformers import Preprocessor
 from ..detector import AnomalyDetector, Forecaster
-from .windowed_gaussian import WindowedGaussian
+from ..residual_analysis.empirical_rule import EmpiricalRule
 from ..metrics import naive_prediction
 
 def DeepAnT_forecaster(win = 32, maps = 32, kernel = 2, conv_strides = 1, 
@@ -39,12 +39,12 @@ def DeepAnT_forecaster(win = 32, maps = 32, kernel = 2, conv_strides = 1,
         m = Model(inputs = i, outputs = o, name = "DeepAnT")
         m.compile(
             optimizer = optimizers.Adam(),
-            loss = losses.MeanSquaredError()
+            loss = losses.MeanAbsoluteError()
         )
         return m
 
 class DeepAnT(AnomalyDetector, Forecaster):
-    def __init__(self, gauss_win = 32, gauss_step = 16, win = 32, maps = 32,
+    def __init__(self, empRule_k = 3, empRule_robust = True, win = 32, maps = 32,
                     kernel = 2, conv_strides = 1, pool_kernel = 2, conv_layers = 2,
                     hidden_size = 256, dropout_rate = .4
                     ):
@@ -102,26 +102,14 @@ class DeepAnT(AnomalyDetector, Forecaster):
         if cfg.cols["y"] in ts.columns:
             residuals[cfg.cols["y"]] = ts[cfg.cols["y"]]
         
-        self.classifier = WindowedGaussian(
-            self.gauss_win,
-            self.gauss_step
+        self.classifier = EmpiricalRule(
+            k = self.empRule_k,
+            robust = self.empRule_robust,
         )
         self.classifier.fit(residuals)
 
         self.preload = ts[cfg.cols["X"]].copy().to_numpy()[-self.win : ]
         return self
-    
-    def predict_proba(self, ts):
-        residuals = self.forecast(ts)
-        residuals[cfg.cols["X"]] = residuals[cfg.cols["residual"]]
-        predict_proba = self.classifier.predict_proba(residuals)
-        
-        predict_proba[cfg.cols["X"]] = ts[cfg.cols["X"]]
-        if cfg.cols["timestamp"] in ts.columns:
-            if cfg.cols["timestamp"] not in predict_proba.columns:
-                predict_proba[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]]
-        predict_proba[cfg.cols["forecast"]] = residuals[cfg.cols["forecast"]]
-        return predict_proba
     
     def predict(self, ts):
         residuals = self.forecast(ts)
@@ -129,9 +117,10 @@ class DeepAnT(AnomalyDetector, Forecaster):
         prediction = self.classifier.predict(residuals)
         
         prediction[cfg.cols["X"]] = ts[cfg.cols["X"]]
-        if cfg.cols["timestamp"] in ts.columns:
-            if cfg.cols["timestamp"] not in prediction.columns:
-                prediction[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]]
+        if cfg.cols["timestamp"] in ts.columns and \
+            cfg.cols["timestamp"] not in prediction.columns\
+            :
+            prediction[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]]
         prediction[cfg.cols["forecast"]] = residuals[cfg.cols["forecast"]]
         return prediction
 

@@ -12,6 +12,7 @@ from . import configuration as cfg
 from .transformers import Preprocessor
 from .models.windowed_gaussian import WindowedGaussian
 from .models import deepant, gru, lstm, sarimax, prophet
+from .residual_analysis.empirical_rule import EmpiricalRule
 
 class Tuner():
     def tune(self, ts):
@@ -127,13 +128,14 @@ class DeepAnTTuner(AbstractTuner):
         self.explored_cfgs_ = {}
         pre = Preprocessor(ts)
         ts = pre.nan_filled
+
         # tune forecaster
-        X, y = pre.extract_windows(
+        wind_X, wind_y = pre.extract_windows(
             ts[cfg.cols["X"]].copy().to_numpy(), 
             w = self.search_space["win"][0]
         )
-        X_train, X_dev = pre.train_test_split(X)
-        y_train, y_dev = pre.train_test_split(y)
+        X_train, X_dev = pre.train_test_split(wind_X)
+        y_train, y_dev = pre.train_test_split(wind_y)
         X_train, y_train = pre.shuffle(X_train, y_train)
         X_dev, y_dev = pre.shuffle(X_dev, y_dev)
 
@@ -188,35 +190,28 @@ class DeepAnTTuner(AbstractTuner):
         val_loss_history = history.history['val_loss']
         best_epoch_ = val_loss_history.index(min(val_loss_history)) + 1
         self.forecaster = hb.hypermodel.build(best_hps)
-        X, y = pre.extract_windows(
-            ts[cfg.cols["X"]].copy().to_numpy(), 
-            w = self.win
-        )
-        X, y = pre.shuffle(X, y)
-        self.forecaster.fit(X, y, epochs = best_epoch_)
-        y_hat = self.forecaster.predict(X_dev).flatten()
-        rmse = mean_squared_error(y_dev, y_hat, squared = False)
+        self.forecaster.fit(wind_X, wind_y, epochs = best_epoch_)
+        y_hat = self.forecaster.predict(wind_X).flatten()
+        rmse = mean_squared_error(wind_y, y_hat, squared = False)
         forecaster_configs = [{
             "config": self.best_config_,
             "rmse": rmse,
         },]
 
-        wgTuner = WindGaussTuner()
-        wgTuner.set_space({
-            "w": self.search_space["gauss_win"],
-            "step": self.search_space["gauss_step"],
-        })
-        wgTuner.tune(ts)
-        self.classifier = wgTuner.best_model_
-
+        residuals_ts = pd.DataFrame()
+        residuals_ts[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]][-len(y_hat):]
+        residuals_ts[cfg.cols["X"]] = wind_y - y_hat
+        self.classifier = EmpiricalRule(
+            robust = True
+        ).fit(residuals_ts)
         self.explored_cfgs_["predictor"] = forecaster_configs
-        self.explored_cfgs_["classifier"] = wgTuner.explored_cfgs_
+        self.explored_cfgs_["classifier"] = {"k": [3, ], "robust": [True, ]}
 
         self.preload = ts[cfg.cols["X"]].copy().to_numpy()[-self.win : ]
 
         model = deepant.DeepAnT()
-        self.best_config_["gauss_win"] = wgTuner.best_config_["w"]
-        self.best_config_["gauss_step"] = wgTuner.best_config_["step"]
+        self.best_config_["empRule_k"] = self.classifier.k
+        self.best_config_["empRule_robust"] = self.classifier.robust
         model.set_params(**self.best_config_)
         model.forecaster = self.forecaster
         model.classifier = self.classifier
@@ -244,12 +239,12 @@ class GRUTuner(AbstractTuner):
         pre = Preprocessor(ts)
         ts = pre.nan_filled
         # tune forecaster
-        X, y = pre.extract_windows(
+        wind_X, wind_y = pre.extract_windows(
             ts[cfg.cols["X"]].copy().to_numpy(), 
             w = self.search_space["win"][0]
         )
-        X_train, X_dev = pre.train_test_split(X)
-        y_train, y_dev = pre.train_test_split(y)
+        X_train, X_dev = pre.train_test_split(wind_X)
+        y_train, y_dev = pre.train_test_split(wind_y)
         X_train, y_train = pre.shuffle(X_train, y_train)
         X_dev, y_dev = pre.shuffle(X_dev, y_dev)
 
@@ -314,40 +309,32 @@ class GRUTuner(AbstractTuner):
                     patience = 3,
                 ), ]
         )
-        
+
         val_loss_history = history.history['val_loss']
         best_epoch_ = val_loss_history.index(min(val_loss_history)) + 1
         self.forecaster = hb.hypermodel.build(best_hps)
-        X, y = pre.extract_windows(
-            ts[cfg.cols["X"]].copy().to_numpy(), 
-            w = self.win
-        )
-        X, y = pre.shuffle(X, y)
-        self.forecaster.fit(X, y, epochs = best_epoch_)
-        y_hat = self.forecaster.predict(X_dev).flatten()
-        rmse = mean_squared_error(y_dev, y_hat, squared = False)
+        self.forecaster.fit(wind_X, wind_y, epochs = best_epoch_)
+        y_hat = self.forecaster.predict(wind_X).flatten()
+        rmse = mean_squared_error(wind_y, y_hat, squared = False)
         forecaster_configs = [{
             "config": self.best_config_,
             "rmse": rmse,
         },]
 
-
-        wgTuner = WindGaussTuner()
-        wgTuner.set_space({
-            "w": self.search_space["gauss_win"],
-            "step": self.search_space["gauss_step"],
-        })
-        wgTuner.tune(ts)
-        self.classifier = wgTuner.best_model_
-        
+        residuals_ts = pd.DataFrame()
+        residuals_ts[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]][-len(y_hat):]
+        residuals_ts[cfg.cols["X"]] = wind_y - y_hat
+        self.classifier = EmpiricalRule(
+            robust = True
+        ).fit(residuals_ts)
         self.explored_cfgs_["predictor"] = forecaster_configs
-        self.explored_cfgs_["classifier"] = wgTuner.explored_cfgs_
+        self.explored_cfgs_["classifier"] = {"k": [3, ], "robust": [True, ]}
 
         self.preload = ts[cfg.cols["X"]].copy().to_numpy()[-self.win : ]
-
+        
         model = gru.GRU()
-        self.best_config_["gauss_win"] = wgTuner.best_config_["w"]
-        self.best_config_["gauss_step"] = wgTuner.best_config_["step"]
+        self.best_config_["empRule_k"] = self.classifier.k
+        self.best_config_["empRule_robust"] = self.classifier.robust
         model.set_params(**self.best_config_)
         model.forecaster = self.forecaster
         model.classifier = self.classifier
@@ -375,12 +362,12 @@ class LSTMTuner(AbstractTuner):
         pre = Preprocessor(ts)
         ts = pre.nan_filled
         # tune forecaster
-        X, y = pre.extract_windows(
+        wind_X, wind_y = pre.extract_windows(
             ts[cfg.cols["X"]].copy().to_numpy(), 
             w = self.search_space["win"][0]
         )
-        X_train, X_dev = pre.train_test_split(X)
-        y_train, y_dev = pre.train_test_split(y)
+        X_train, X_dev = pre.train_test_split(wind_X)
+        y_train, y_dev = pre.train_test_split(wind_y)
         X_train, y_train = pre.shuffle(X_train, y_train)
         X_dev, y_dev = pre.shuffle(X_dev, y_dev)
 
@@ -449,35 +436,28 @@ class LSTMTuner(AbstractTuner):
         val_loss_history = history.history['val_loss']
         best_epoch_ = val_loss_history.index(min(val_loss_history)) + 1
         self.forecaster = hb.hypermodel.build(best_hps)
-        X, y = pre.extract_windows(
-            ts[cfg.cols["X"]].copy().to_numpy(), 
-            w = self.win
-        )
-        X, y = pre.shuffle(X, y)
-        self.forecaster.fit(X, y, epochs = best_epoch_)
-        y_hat = self.forecaster.predict(X_dev).flatten()
-        rmse = mean_squared_error(y_dev, y_hat, squared = False)
+        self.forecaster.fit(wind_X, wind_y, epochs = best_epoch_)
+        y_hat = self.forecaster.predict(wind_X).flatten()
+        rmse = mean_squared_error(wind_y, y_hat, squared = False)
         forecaster_configs = [{
             "config": self.best_config_,
             "rmse": rmse,
         },]
 
-        wgTuner = WindGaussTuner()
-        wgTuner.set_space({
-            "w": self.search_space["gauss_win"],
-            "step": self.search_space["gauss_step"],
-        })
-        wgTuner.tune(ts)
-        self.classifier = wgTuner.best_model_
-
+        residuals_ts = pd.DataFrame()
+        residuals_ts[cfg.cols["timestamp"]] = ts[cfg.cols["timestamp"]][-len(y_hat):]
+        residuals_ts[cfg.cols["X"]] = wind_y - y_hat
+        self.classifier = EmpiricalRule(
+            robust = True
+        ).fit(residuals_ts)
         self.explored_cfgs_["predictor"] = forecaster_configs
-        self.explored_cfgs_["classifier"] = wgTuner.explored_cfgs_
+        self.explored_cfgs_["classifier"] = {"k": [3, ], "robust": [True, ]}
 
         self.preload = ts[cfg.cols["X"]].copy().to_numpy()[-self.win : ]
 
         model = lstm.LSTM()
-        self.best_config_["gauss_win"] = wgTuner.best_config_["w"]
-        self.best_config_["gauss_step"] = wgTuner.best_config_["step"]
+        self.best_config_["empRule_k"] = self.classifier.k
+        self.best_config_["empRule_robust"] = self.classifier.robust
         model.set_params(**self.best_config_)
         model.forecaster = self.forecaster
         model.classifier = self.classifier

@@ -36,6 +36,7 @@ prophet = {
     "file": "prophet.pkl",
 }
 
+# Empirical Rule ------------------------------------------
 empRule = {
     "file_ext": anomDetect["file_ext"].format("{:s}.emprule"),
 }

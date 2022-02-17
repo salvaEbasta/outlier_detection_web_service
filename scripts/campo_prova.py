@@ -46,16 +46,6 @@ p = int(1 / (fs[np.argmax(P)] + np.finfo(float).eps))
 p, fs[np.argmax(P)]
 
 # %%
-class Prova():
-    def __init__(self, prova=2):
-        self.prova = prova
-        print("prova")
-    def p(self):
-        print(self.prova)
-    def pp(self):
-        print("UwU")
-p = Prova()
-# %%
 import os, sys
 import numpy as np
 import pandas as pd
