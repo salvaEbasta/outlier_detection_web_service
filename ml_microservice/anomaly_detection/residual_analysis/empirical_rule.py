@@ -21,7 +21,7 @@ class EmpiricalRule(BaseEstimator):
         X = ts[cfg.cols["X"]].to_numpy()
         self.mean_ = np.mean(X) if not self.robust else np.median(X)
         self.var_ = np.var(X)
-        self.std_dev_ = sqrt(self.var_)
+        self.std_dev_ = float(np.std(X))
         return self
     
     def predict(self, ts):
