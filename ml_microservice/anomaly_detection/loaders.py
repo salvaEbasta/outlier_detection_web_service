@@ -11,7 +11,6 @@ import statsmodels.api as sm
 
 from . import configuration as cfg
 from .detector import AnomalyDetector
-#from .models import windowed_gaussian
 from .models.deepant import DeepAnT
 from .models.gru import GRU
 from .models.lstm import LSTM
@@ -23,6 +22,17 @@ class Loader():
     def load(self, path) -> AnomalyDetector:
         raise NotImplementedError()
 
+class EmpRuleLoader(Loader):
+    def __init__(self, file = cfg.empRule["default_file"]) -> None:
+        self.file = file
+
+    def load(self, path):
+        if re.match(cfg.empRule["file_ext"].format(".+"), self.file) is None:
+            return None
+        if self.file not in os.listdir(path):
+            return None
+        return joblib.load(os.path.join(path, self.file))
+
 class WindGaussLoader(Loader):
     def __init__(self, file = cfg.windGauss["default_file"]):
         self.file = file
@@ -32,8 +42,7 @@ class WindGaussLoader(Loader):
             return None
         if self.file not in os.listdir(path):
             return None
-        wg = joblib.load(os.path.join(path, self.file))
-        return wg
+        return joblib.load(os.path.join(path, self.file))
 
 class DeepAnTLoader(Loader):
     def __init__(self, 
@@ -65,13 +74,11 @@ class DeepAnTLoader(Loader):
         setattr(d, "preload", preload)
 
         classifier_path = os.path.join(path, self.classifier_dir)
-        wgLoader = WindGaussLoader()
-        classifier = wgLoader.load(classifier_path)
-        setattr(d, "classifier", classifier)
+        erLoader = EmpRuleLoader()
+        setattr(d, "classifier", erLoader.load(classifier_path))
         
         forecaster_path = os.path.join(path, self.forecaster_dir)
-        forecaster = models.load_model(forecaster_path)
-        setattr(d, "forecaster", forecaster)
+        setattr(d, "forecaster", models.load_model(forecaster_path))
         return d
 
 class GRULoader(Loader):
@@ -104,13 +111,11 @@ class GRULoader(Loader):
         setattr(gru, "preload", preload)
 
         classifier_path = os.path.join(path, self.classifier_dir)
-        wgLoader = WindGaussLoader()
-        classifier = wgLoader.load(classifier_path)
-        setattr(gru, "classifier", classifier)
+        erLoader = EmpRuleLoader()
+        setattr(gru, "classifier", erLoader.load(classifier_path))
         
         forecaster_path = os.path.join(path, self.forecaster_dir)
-        forecaster = models.load_model(forecaster_path)
-        setattr(gru, "forecaster", forecaster)
+        setattr(gru, "forecaster", models.load_model(forecaster_path))
         return gru
 
 class LSTMLoader(Loader):
@@ -143,13 +148,11 @@ class LSTMLoader(Loader):
         setattr(lstm, "preload", preload)
 
         classifier_path = os.path.join(path, self.classifier_dir)
-        wgLoader = WindGaussLoader()
-        classifier = wgLoader.load(classifier_path)
-        setattr(lstm, "classifier", classifier)
+        erLoader = EmpRuleLoader()
+        setattr(lstm, "classifier", erLoader.load(classifier_path))
         
         forecaster_path = os.path.join(path, self.forecaster_dir)
-        forecaster = models.load_model(forecaster_path)
-        setattr(lstm, "forecaster", forecaster)
+        setattr(lstm, "forecaster", models.load_model(forecaster_path))
         return lstm
 
 class SARIMAXLoader(Loader):
@@ -224,19 +227,3 @@ class ProphetLoader(Loader):
         forecaster = joblib.load(forecaster_file)
         setattr(prophet, "forecaster", forecaster)
         return prophet
-
-class TransformerLoader():
-    def load(self, path) -> TransformerMixin:
-        raise NotImplementedError()
-
-class EmpRuleLoader(TransformerLoader):
-    def __init__(self, file = cfg.empRule["default_file"]):
-        self.file = file
-        
-    def load(self, path):
-        if re.match(cfg.empRule["file_ext"].format(".+"), self.file) is None:
-            return None
-        if self.file not in os.listdir(path):
-            return None
-        er = joblib.load(os.path.join(path, self.file))
-        return er

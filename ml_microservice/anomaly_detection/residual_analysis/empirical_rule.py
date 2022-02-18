@@ -6,9 +6,11 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator
 
+from ..detector import Persistent
+
 from .. import configuration as cfg
 
-class EmpiricalRule(BaseEstimator):
+class EmpiricalRule(BaseEstimator, Persistent):
     def __init__(self, k = 3, robust = False):
         self.k = k
         self.robust = robust
