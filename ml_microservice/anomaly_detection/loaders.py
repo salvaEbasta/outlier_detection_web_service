@@ -5,8 +5,7 @@ import os
 import re
 
 import numpy as np
-from sklearn.base import TransformerMixin
-from tensorflow.keras import models
+from tensorflow.keras import models as keras_models
 import statsmodels.api as sm
 
 from . import configuration as cfg
@@ -78,7 +77,7 @@ class DeepAnTLoader(Loader):
         setattr(d, "classifier", erLoader.load(classifier_path))
         
         forecaster_path = os.path.join(path, self.forecaster_dir)
-        setattr(d, "forecaster", models.load_model(forecaster_path))
+        setattr(d, "forecaster", keras_models.load_model(forecaster_path))
         return d
 
 class GRULoader(Loader):
@@ -115,7 +114,7 @@ class GRULoader(Loader):
         setattr(gru, "classifier", erLoader.load(classifier_path))
         
         forecaster_path = os.path.join(path, self.forecaster_dir)
-        setattr(gru, "forecaster", models.load_model(forecaster_path))
+        setattr(gru, "forecaster", keras_models.load_model(forecaster_path))
         return gru
 
 class LSTMLoader(Loader):
@@ -152,7 +151,7 @@ class LSTMLoader(Loader):
         setattr(lstm, "classifier", erLoader.load(classifier_path))
         
         forecaster_path = os.path.join(path, self.forecaster_dir)
-        setattr(lstm, "forecaster", models.load_model(forecaster_path))
+        setattr(lstm, "forecaster", keras_models.load_model(forecaster_path))
         return lstm
 
 class SARIMAXLoader(Loader):
