@@ -1,5 +1,7 @@
 # %%
-# Imports
+"""
+    Setup microservice
+"""
 import os
 from requests import get, post
 import shutil
@@ -10,20 +12,24 @@ import matplotlib.pyplot as plt
 
 from ml_microservice import configuration as c
 
-URL = "http://localhost:5000/api/"
 if 'demo' in os.listdir(c.timeseries.path):
     shutil.rmtree(os.path.join(c.timeseries.path), 'demo')
 if 'demo_test' in os.listdir(c.detectorTrainer.path):
     shutil.rmtree(os.path.join(c.detectorTrainer.path, 'demo_test'))
+
+URL = "http://localhost:5000/api/"
+
 # %%
-# Dump XML -> dataset initialization
+"""
+    Dump XML -> dataset initialization
+"""
 print("Demo: XML conversion and dataset initialization")
 xml_label = 'demo'
 current_xml = 'demo_s11_2017_samples.xml'
 with open(os.path.join(c.xml.path, current_xml), 'r') as f:
     xml_body = ''.join(f.read().replace('\n', ''))
 
-r = get(URL+"datasets/local").json()
+r = get(URL + "datasets/local").json()
 print("Available datasets, labels: ", [d['label'] for d in r['available']])
 print("Found label \'{}\': {}".format(
     xml_label, 
