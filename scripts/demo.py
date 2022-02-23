@@ -1,140 +1,422 @@
 # %%
-# Imports
+"""
+    Setup microservice
+"""
 import os
-from requests import get, post
 import shutil
+import sys
+from requests import get, post
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+wdir = os.path.abspath(os.curdir)
+if "ml_microservice" not in os.listdir(wdir):
+    wdir = os.path.abspath(os.path.join(wdir, ".."))
+    os.chdir(wdir)
+    sys.path.append(wdir)
+
 from ml_microservice import configuration as c
 
+wdir = os.path.abspath(os.curdir)
+demo_data_folder = os.path.join(wdir, os.path.join("scripts", "demo_data"))
+
 URL = "http://localhost:5000/api/"
-if 'demo' in os.listdir(c.timeseries.path):
-    shutil.rmtree(os.path.join(c.timeseries.path, 'demo'))
-if 'demo_test' in os.listdir(c.detectorTrainer.path):
-    shutil.rmtree(os.path.join(c.detectorTrainer.path, 'demo_test'))
+print(f"Service available @{URL}")
+
+
+
+
+
+
+
+
+
+
+
+
+
 # %%
-# ----------------------------------------------------------------------------------------
-print("DEMO: XML conversion and dataset initialization")
-xml_label = 'demo'
+"""
+    Load XML -> timeseries initialization
+"""
+print("------------------XML conversion and timeseries initialization---------")
+groupID = 'demo'
+if groupID in os.listdir(c.timeseries.path):
+    shutil.rmtree(os.path.join(c.timeseries.path, groupID))
+
 current_xml = 'demo_s11_2017_samples.xml'
-with open(os.path.join(c.xml.path, current_xml), 'r') as f:
+
+with open(os.path.join(demo_data_folder, current_xml), 'r') as f:
     xml_body = ''.join(f.read().replace('\n', ''))
 
-r = get(URL+"datasets/local").json()
-print("Available datasets, labels: ", [d['label'] for d in r['available']])
-print("Found label \'{}\': {}".format(
-    xml_label, 
-    xml_label in [d['label'] for d in r['available']]
+r = get(URL + "timeseries").json()
+print(f"[{r['code']}] Available groups: {r['timeseries']}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# %%
+r = post(URL + "convert/xml", json = dict(
+    xml = xml_body,
+    store = dict(
+        group = groupID,
+        override = True,
+    ),
+)).json()
+print(f"[{r['code']}] Xml conversion: {r}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# %%
+r = get(URL+"timeseries").json()
+print("Available timeseries, groups: ", [d['group'] for d in r['timeseries']])
+print("Found group \'{}\': {}".format(
+    groupID, 
+    groupID in [d['group'] for d in r['timeseries']]
 ))
+dims = [d['dimensions'] for d in r['timeseries']
+        if d['group'] == groupID][0]
+print(f"Group \'{groupID}\': dimensions - {dims}")
 
-r = post(URL + "conversion/xml", json=dict(
-    label = xml_label,
-    xml = xml_body,
-    store = True,
-)).json()
-print("Xml conversion: {}".format(r))
+dimID = dims[0]
+r = get(URL + f"timeseries/{groupID}/{dimID}").json()
+print(f'Group \'{groupID}\'-\'{dimID}\': shape - {r["group"]["dimension"]["shape"]}')
 
-r = get(URL + f"datasets/local/{xml_label}/unnamed").json()
-print(f'Demo shape: {r["shape"]}')
-last_value = r['shape'][0]
-r = get(URL + f"datasets/local/{xml_label}/unnamed/net_amount").json()
-plt.plot(r['values'])
+tsID = r['group']['dimension']['tsIDs'][0]
+print(f"Group \'{groupID}\'-\'{dimID}\': timeseries - {r['group']['dimension']['tsIDs']}")
+r = get(URL + f"timeseries/{groupID}/{dimID}/{tsID}").json()
+ts = pd.Series(r["values"], index = list(r["values"].keys()))
+ts.plot()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # %%
-# ----------------------------------------------------------------------------------------
-print("DEMO: dataset growth")
+# Dump XML -> dataset growth
+print("-------------Timseries growth---------------------------")
 current_xml = 'demo_s11_2018_samples.xml'
-with open(os.path.join(c.xml.path, current_xml), 'r') as f:
+with open(os.path.join(demo_data_folder, current_xml), 'r') as f:
     xml_body = ''.join(f.read().replace('\n', ''))
 
-r = post(URL + "conversion/xml", json=dict(
-    label = xml_label,
+# Only conversion, no persistence
+r = post(URL + "convert/xml", json = dict(
     xml = xml_body,
-    store = True,
 )).json()
 print("Xml conversion: {}".format(r))
 
-r = get(URL + f"datasets/local/{xml_label}/unnamed").json()
-print(f'Demo shape: {r["shape"]}')
-r = get(URL + f"datasets/local/{xml_label}/unnamed/net_amount").json()
-serie = r['values']
-plt.plot(serie)
-# last_value = 53
-plt.vlines(last_value, max(serie), min(serie), 'r')
+# Same shape
+r = get(URL + f"timeseries/{groupID}/{dimID}").json()
+print(f'Group \'{groupID}\'-\'{dimID}\': shape - {r["group"]["dimension"]["shape"]} - unchanged')
+last_value = r["group"]["dimension"]["shape"][0]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # %%
-# ----------------------------------------------------------------------------------------
-print("DEMO: detector creation")
-r = get(URL + "time_series_forecasting/models").json()
-print("Possible forecasting models: {}".format([m['architecture'] for m in r['available']]))
+# Persistence
+r = post(URL + "convert/xml", json = dict(
+    xml = xml_body,
+    store = dict(
+        group = groupID,
+        override = False,
+    ),
+)).json()
+print("Xml conversion: {}".format(r))
 
-forecaster = 'test'
-mid = 'demo_test'
-training_data = dict(
-    label= xml_label,
-    dataset= 'unnamed',
-    column= 'net_amount'
-)
 
-r = post(URL + "anomaly_detectors", json = dict(
-    identifier = mid,
-    training = training_data,
-    forecasting_model = forecaster
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# %%
+r = get(URL + f"timeseries/{groupID}/{dimID}").json()
+print(f'Group \'{groupID}\'-\'{dimID}\': shape - {r["group"]["dimension"]["shape"]}')
+r = get(URL + f"timeseries/{groupID}/{dimID}/{tsID}").json()
+ts = pd.Series(r["values"], index = list(r["values"].keys()))
+ts.plot()
+# last_value = 53
+plt.vlines(last_value, max(ts), min(ts), 'r')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# %%
+# Detector creation
+print("---------------Train Anomaly Detector----------------------")
+mid = 'demo'
+if mid in os.listdir(c.detectorTrainer.path):
+    shutil.rmtree(os.path.join(c.detectorTrainer.path, mid))
+method = "WindowedGaussian"
+
+r = get(URL + "anomaly_detection").json()
+print(f"Saved detectors: {r['saved']}")
+
+r = get(URL + "anomaly_detection/methods").json()
+print(f"Available anomaly detection methods: {r['methods']}")
+
+r = post(URL + "anomaly_detection", json = dict(
+    train = dict(
+        groupID = groupID,
+        dimID = dimID,
+        tsID = tsID,
+    ),
+    mID = mid,
+    method = method,
 )).json()
 print(r)
 
-test_anomalies = np.array(r['result']['training_performance']['anomalies']).flatten()
-plt.plot(serie[-len(test_anomalies):], 'y')
-plt.plot(
-    [i for i,a in enumerate(test_anomalies) if a == 1], 
-    [e for e in np.array(serie[-len(test_anomalies):])*test_anomalies if e != 0], 
-    'rx'
-)
+version = r["model"]["version"]
 
-version = 'v0'
-r = get(URL+f"anomaly_detectors/{mid}/{version}").json()
-print("{} - {}: {}".format(mid, version, r['summary']))
-# ----------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # %%
-print("DEMO: detection")
+r = get(URL + "anomaly_detection").json()
+print("Saved detectors: {}".format(r))
+
+r = get(URL + f"anomaly_detection/{mid}/{version}").json()
+print(f"{mid} - {version}: Metadata: {r['metadata']}")
+
+r = get(URL + f"anomaly_detection/{mid}/{version}/parameters").json()
+print(f"{mid} - {version}: Parameters: {r['params']}")
+
+r = get(URL + f"anomaly_detection/{mid}/{version}/history").json()
+print(f"{mid} - {version}: History: {r['history']}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# %%
+print("---------------Anomaly detection------------------")
 current_xml = 'demo_s11_2019_samples.xml'
-with open(os.path.join(c.xml.path, current_xml), 'r') as f:
+with open(os.path.join(demo_data_folder, current_xml), 'r') as f:
     xml_body = ''.join(f.read().replace('\n', ''))
 
-r = post(URL + "conversion/xml", json=dict(
-    label = xml_label,
+r = post(URL + "convert/xml", json = dict(
     xml = xml_body,
-    store = False,
 )).json()
-to_detect = np.array(r['extracted'][0]['data']['net_amount']).flatten()
-plt.plot(to_detect)
-plt.title('To detect')
+print("Xml conversion: {}".format(r['extracted']))
 
-version = 'v0'
-r = post(URL + f"anomaly_detectors/{mid}/{version}", json = dict(
-    data = to_detect.tolist(),
-    pre_load = training_data,
-    store = True
+import numpy as np
+for i, v in enumerate(r["extracted"][0]["data"]["net_amount"]):
+    if v == "null":
+        r["extracted"][0]["data"]["net_amount"][i] = np.nan
+
+eval_ts = pd.DataFrame()
+eval_ts["value"] = r["extracted"][0]["data"]["net_amount"]
+eval_ts["timestamp"] = pd.to_datetime(r["extracted"][0]["data"]["timestamp"])
+eval_ts["value"].plot()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# %%
+r = post(URL + f"anomaly_detection/{mid}/{version}", json = dict(
+    data = dict(
+        values = eval_ts["value"].fillna("null").to_list(),
+        dates = eval_ts["timestamp"].astype("string").to_list(),
+    )
 )).json()
-print(r)
-results = r['results']
-data = results['data']
-idx = results['start_detection_idx']
+print(f"Predictions: {r['predictions']}")
+eval_ts["outlier_score"] = r["predictions"]["anomaly_score"]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # %%
-plt.plot(data, 'y')
-anomalies = np.array(results['anomalies']).flatten()
-for i, (v, a) in enumerate(zip(data[-len(to_detect):], anomalies)):
-    if a > 0:
-        plt.plot(idx + i, v, 'rx')
+eval_ts["value"].plot()
+for i, score in enumerate(eval_ts["outlier_score"]):
+    if score > .95:
+        plt.plot(i, eval_ts["value"][i], 'ro')
+
+
 # %%
-# ----------------------------------------------------------------------------------------
-print("DEMO: Retrain")
-r = post(URL + f"anomaly_detectors/{mid}/{version}", json = dict(
-    data = np.random.normal(0, .1, size = (to_detect.shape[0]*5, )).tolist(),
-    pre_load = training_data,
-    store = True,
-)).json()
-print(r)
-print("Detected degradation: ", r['results']['degradation'])
-# %%
+# Remove demo resources
+if groupID in os.listdir(c.timeseries.path):
+    shutil.rmtree(os.path.join(c.timeseries.path, groupID))
+
+if mid in os.listdir(c.detectorTrainer.path):
+    shutil.rmtree(os.path.join(c.detectorTrainer.path, mid))

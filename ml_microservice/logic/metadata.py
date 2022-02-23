@@ -42,7 +42,7 @@ class Metadata():
         else:
             self._content = {}
             self._content[old_cfg.metadataKs.status] = Status.training
-            self._content[old_cfg.metadataKs.created] = datetime.now().isoformat()
+            self._content[old_cfg.metadataKs.created] = datetime.datetime.now().isoformat()
             self._content[old_cfg.metadataKs.type] = ""
             self._content[old_cfg.metadataKs.ts] = {}
             self._content[old_cfg.metadataKs.train] = {}
@@ -60,10 +60,11 @@ class Metadata():
     def set_training_info(self, last_train_IDX: int, total_time: float, 
                             best_config: Dict, ):
         self._content[old_cfg.metadataKs.status] = Status.trained
-        tmp = {}
-        tmp[old_cfg.metadataKs.train_trainIDX] = last_train_IDX
-        tmp[old_cfg.metadataKs.train_time] = total_time
-        tmp[old_cfg.metadataKs.train_bestConfig] = best_config
+        self._content[old_cfg.metadataKs.train] = {
+            f"{old_cfg.metadataKs.train_trainIDX}": last_train_IDX,
+            f"{old_cfg.metadataKs.train_time}": total_time,
+            f"{old_cfg.metadataKs.train_bestConfig}": best_config,
+        }
     
     @property
     def last_train_IDX(self):
@@ -78,21 +79,22 @@ class Metadata():
             self._content[old_cfg.metadataKs.ts][old_cfg.metadataKs.ts_tsID], \
 
     def set_ts(self, group: str, dimension: str, tsID: str):
-        tmp = {}
-        tmp[old_cfg.metadataKs.ts_group] = group
-        tmp[old_cfg.metadataKs.ts_dim] = dimension
-        tmp[old_cfg.metadataKs.ts_tsID] = tsID
-        self._content[old_cfg.metadataKs.ts] = tmp
+        self._content[old_cfg.metadataKs.ts] = {
+            f"{old_cfg.metadataKs.ts_group}": group,
+            f"{old_cfg.metadataKs.ts_dim}": dimension,
+            f"{old_cfg.metadataKs.ts_tsID}": tsID,
+        }
 
     def is_training_done(self):
-        return self._content[old_cfg.metadataKs.type]["code"] == Status.trained["code"]
+        return self._content[old_cfg.metadataKs.status]["code"] == Status.trained["code"]
 
     def save(self, dir_path):
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
-        file = os.path.join(dir_path, old_cfg.metadata.file)
+        file = os.path.join(dir_path, old_cfg.metadata.default_file)
         with open(file, "w") as f:
             json.dump(self._content, f, indent = 4)
+        return self
 
     def __str__(self) -> str:
             return json.dumps(self._content)

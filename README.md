@@ -21,8 +21,15 @@ To launch the service, once the environment is active, simply run:
 python ml_microservice
 ```
 
-Launch service: python -m ml_microservice
+## Demo
+The service is provided with a simple demo ```demo.py```, illustrating the main interaction.
+The demo, as the service, has to be run in the same environment.
+The demo source is located in the folder ```scripts```.
 
-Demo: python long_demo.ipynb
-
-Compose timeseries from .zip archive(XMLs): python compose_timeseries.py zipPath
+## Compose timeseries from xml files
+Compose timeseries from .zip archive(XMLs):
+```
+python compose_timeseries.py <zipPath>
+```
+The zip must contain the series, organized in groups of files xml.
+The script is located in the folder ```scripts```.

@@ -1,11 +1,14 @@
-from typing import Dict, List, Tuple
+from typing import Tuple
 import logging
+
+import numpy as np
 
 from ml_microservice.logic.facade import LogicFacade
 from ml_microservice import configuration as old_cfg
+from ml_microservice.anomaly_detection import configuration as cfg
 
 class Controller():
-    def handle(self, *args, **kwargs) -> Tuple[Dict, int]:
+    def handle(self, *args, **kwargs) -> Tuple[dict, int]:
         raise NotImplementedError()
 
 class RequestHandler():
@@ -22,6 +25,7 @@ class AbstractController(Controller):
         try:
             return self._handle(*args, **kwargs)
         except Exception as e:
+            raise e
             return {
                     'code': 500,
                     'name': type(e),
@@ -57,12 +61,14 @@ class ConvertXML(AbstractController, RequestHandler):
             raise ValueError('The field \'xml\' must be specified')
         self.xml = payload['xml']
 
+        self.logger.info("Unpack: optionals")
+
         # Optionals
-        if 'id_patterns' in payload and type(payload['id_patterns']) is not str:
+        if 'id_patterns' in payload and type(payload['id_patterns']) is not list:
             raise ValueError('The field \'id_patterns\' must be a list of strings')
-        self.id_patterns = [payload.get('id_patterns')] if 'id_patterns' in payload else []
+        self.id_patterns = payload.get('id_patterns', [])
         
-        if 'ignore_patterns' in payload and type(payload['ignore_patterns']) is not List[str]:
+        if 'ignore_patterns' in payload and type(payload['ignore_patterns']) is not list:
             raise ValueError('The field \'ignore_patterns\' must be a list of strings')
         self.ignore_patterns = payload.get('ignore_patterns', [])
 
@@ -78,6 +84,7 @@ class ConvertXML(AbstractController, RequestHandler):
                 raise ValueError('The field \'override\' must be specified if the series is to be stored')
         self.group = self.store_info.get("group", None)
         self.override = self.store_info.get("override", False)
+        self.logger.info("Unpack: done")
 
     def _handle(self, *args, **kwargs):
         """
@@ -92,15 +99,18 @@ class ConvertXML(AbstractController, RequestHandler):
         """
         try:
             self.unpack(self.payload)
+
+            self.logger.info("Conversion: start")
             dfs = LogicFacade().convert_xml(
-                id_patterns=self.id_patterns,
-                ignore_patterns=self.ignore_patterns,
-                store=self.store,
-                xml=self.xml,
-                override=self.override,
-                groupID=self.group
+                id_patterns = self.id_patterns,
+                ignore_patterns = self.ignore_patterns,
+                store = self.store,
+                xml = self.xml,
+                override = self.override,
+                groupID = self.group
             )
-            dC = old_cfg.timeseries.date_column
+            self.logger.info("Conversion: end")
+            dC = cfg.cols["timestamp"]
             tmp = {}
             for dfID, df in dfs.items():
                 if dC in df.columns:
@@ -124,6 +134,7 @@ class ConvertXML(AbstractController, RequestHandler):
                     })
             return resp, 200
         except ValueError as e:
+            print(e)
             return {
                 'code': 400,
                 'name': 'BadeRequest',
@@ -146,14 +157,14 @@ class ListTimeseries(AbstractController):
         """
         return {
             'code': 200,
-            'timeseries': LogicFacade.list_ts(),
+            'timeseries': LogicFacade().list_ts(),
         }, 200
 
 class ExploreTSDim(AbstractController):
-    def __init__(self, group, dimension):
+    def __init__(self, groupID, dimID):
         super().__init__()
-        self.group = group
-        self.dimension = dimension
+        self.group = groupID
+        self.dimension = dimID
 
     def _handle(self, *args, **kwargs):
         """
@@ -194,10 +205,10 @@ class ExploreTSDim(AbstractController):
             }, 404
 
 class ExploreTS(AbstractController):
-    def __init__(self, group, dimension, tsID):
+    def __init__(self, groupID, dimID, tsID):
         super().__init__()
-        self.group = group
-        self.dimension = dimension
+        self.group = groupID
+        self.dimension = dimID
         self.tsID = tsID
 
     def _handle(self, *args, **kwargs):
@@ -347,11 +358,11 @@ class DetectorTrain(AbstractController, RequestHandler):
             self.unpack(self.payload)
             self.logger.debug("done unpacking")
             result = LogicFacade().detector_train(
-                mID=self.mID,
-                groupID=self.groupID,
-                dimID=self.dimID,
-                tsID=self.tsID,
-                method=self.method,
+                mID = self.mID,
+                groupID = self.groupID,
+                dimID = self.dimID,
+                tsID = self.tsID,
+                method = self.method,
             )
             return {
                 "code": 201,
@@ -456,17 +467,18 @@ class ShowDetectorHistory(AbstractController):
         try:
             history = LogicFacade().detector_history(self.mID, self.version)
             for c in history.columns:
-                history[c] = history[c].fillna(old_cfg.timeseries.nan_str)
-                if c == old_cfg.evaluator.date_column:
+                if c == old_cfg.timeseries.date_column:
                     history[c] = history[c].astype("string")
+                    continue
+                history[c] = history[c].fillna(old_cfg.timeseries.nan_str)
             return {
                 'code': 200,
                 "mID": self.mID,
                 "version": self.version,
-                'history': {c: history[c].to_list() 
-                                for c in history.columns}
+                'history': {c: history[c].to_list() for c in history.columns},
             }, 200
         except ValueError as e:
+            raise e
             return {
                 'code': 400,
                 'name': 'BadRequest',
@@ -537,18 +549,21 @@ class DetectPredict(AbstractController, RequestHandler):
         self.data = payload.get('data', None)
         if self.data is None:
             raise ValueError('A field \'data\' must be specified')
-        if type(self.data) is not Dict:
+        if type(self.data) is not dict:
             raise ValueError('The field \'data\' must be a dict')
         
         self.values = self.data.get("values", None)
         if self.values is None:
             raise ValueError('The field \'values\' must be specified under \'data\'')
-        if type(self.values) is not List[float]:
+        if type(self.values) is not list:
             raise ValueError('The field \'data\':\'values\' must be a list of floats')
+        for i, v in enumerate(self.values):
+            if v == old_cfg.timeseries.nan_str:
+                self.values[i] = np.nan
         
         self.dates = self.data.get("dates", None)
         if self.dates is not None:
-            if type(self.dates) is not List[str]:
+            if type(self.dates) is not list:
                 raise ValueError('The field \'data\':\'dates\' must be a list of strings')
             if len(self.dates) != len(self.values) :
                 raise ValueError('The field \'data\':\'dates\' must be same length of \'data\':\'values\'')
@@ -576,10 +591,10 @@ class DetectPredict(AbstractController, RequestHandler):
             self.logger.debug("Start _handle")
             self.unpack(self.payload)
             tmp = LogicFacade().detector_predict(
-                mID=self.mID,
-                version=self.version,
-                values=self.values,
-                dates=self.dates
+                mID = self.mID,
+                version = self.version,
+                values = self.values,
+                dates = self.dates
             )
             resp = {
                 'code': 200,
@@ -610,6 +625,7 @@ class DetectPredict(AbstractController, RequestHandler):
             }, 404
         except Exception as e:
             self.logger.warning(str(e))
+            raise e
 
 class DetectorEvaluate(AbstractController, RequestHandler):
     def __init__(self, mID, version):

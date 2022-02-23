@@ -19,6 +19,9 @@ class Environment():
             os.makedirs(self.root)
         if self.assets_dir not in os.listdir(self.root):
             os.makedirs(self.assets)
+    
+    def __str__(self):
+        return "Env({})".format(self.root_path)
 
     @property
     def root(self):
@@ -86,7 +89,7 @@ class AnomalyDetectorsLibrary():
         env_ = Environment(self._2storage_path(mID, v))
         env_.compose()
         m = metadata.Metadata().save(env_.root)
-        logging.info("New env: {:s}".format(env_))
+        logging.info("New env: {:s}".format(env_.root))
         return v, env_, m
     
     def retrieve_env(self, mID: str, version: str):

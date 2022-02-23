@@ -55,7 +55,11 @@ class RowAggregator():
                 if c not in df.columns:
                     logging.info(f"[*] - dataframe \'{dim}\': new feature \'{c}\'")
                     df[c] = [np.nan]*len(self.dates)
-            self.dfs[dim] = df.append(update, ignore_index=True)
+            #self.dfs[dim] = df.append(update, ignore_index=True)
+            self.dfs[dim] = pd.concat(
+                [df, pd.DataFrame(update, index = [0])], 
+                ignore_index = True
+            )
         self.dates.append(date)
         logging.debug(f"Dates: {self.dates}")
         logging.debug(f"Dfs: {self.dfs}")

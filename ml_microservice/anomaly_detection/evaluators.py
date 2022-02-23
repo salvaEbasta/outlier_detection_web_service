@@ -15,7 +15,10 @@ from .metrics import naive_metric, naive_prediction
 from . import configuration as cfg
 
 def load_history(path_dir) -> pd.DataFrame:
-    if path_dir is None or not os.path.exists(path_dir):
+    if path_dir is None or \
+        not os.path.exists(path_dir) or\
+        cfg.evaluator["history_file"] not in os.listdir(path_dir)\
+    :
         h = pd.DataFrame()
         h[cfg.cols["timestamp"]] = ""
         h["f1"] = ""
@@ -24,12 +27,11 @@ def load_history(path_dir) -> pd.DataFrame:
         h["mse"] = ""
         h["rmse"] = ""
         h["naive"] = ""
-        return pd.DataFrame()
-    
+        return h
     h_path = os.path.join(path_dir, cfg.evaluator["history_file"])
     h = pd.read_csv(h_path)
     h[cfg.cols["timestamp"]] = pd.to_datetime(h[cfg.cols["timestamp"]])
-    return 
+    return h
 
 class Evaluator:
     def evaluate(self, model, ts):

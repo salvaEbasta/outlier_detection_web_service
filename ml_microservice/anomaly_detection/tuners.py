@@ -36,7 +36,7 @@ class Tuner():
 class AbstractTuner(Tuner):
     def __init__(self, search_space):
         self._search_space = search_space
-        self.explored_cfgs_ = []
+        self.explored_cfgs_ = {}
     
     def set_space(self, configs):
         for k, v in configs.items():
@@ -57,7 +57,7 @@ class AbstractTuner(Tuner):
             os.makedirs(path_dir)
         explored_path = os.path.join(path_dir, cfg.tuner["results_file"])
         with open(explored_path, "w") as f:
-            json.dump(self.explored_cfgs, f)
+            json.dump(self.explored_cfgs_, f)
 
 
 class WindGaussTuner(AbstractTuner):
@@ -73,10 +73,10 @@ class WindGaussTuner(AbstractTuner):
             self.best_model_ = WindowedGaussian().fit(X)
             self.best_config_ = self.best_model_.get_params()
             self.best_score_ = -1
-            self.explored_cfgs_ = [{
+            self.explored_cfgs_ = {
                 "config": self.best_config_,
                 "f1": -1
-            },]
+            }
             return self
         
         #Gridsearch
@@ -84,7 +84,7 @@ class WindGaussTuner(AbstractTuner):
         self.best_config_ = self.best_model_.get_params()
         self.best_score_ = 0
 
-        self.explored_cfgs_ = []
+        self.explored_cfgs_["configs"] = []
         configs = self.to_explore()
         y = ts[cfg.cols["y"]].to_numpy()
         X = ts.drop(cfg.cols["y"], axis = 1)
@@ -101,11 +101,10 @@ class WindGaussTuner(AbstractTuner):
                 self.best_model_ = current
                 self.best_config_ = config
             
-            exploration_result = {
+            self.explored_cfgs_["configs"].append({
                 "config": config,
                 "f1": score
-            }
-            self.explored_cfgs_.append(exploration_result)
+            })
         return self
 
 

@@ -12,8 +12,6 @@ from ml_microservice.anomaly_detection import configuration as cfg
 from ml_microservice.anomaly_detection.factory import Factory
 from ml_microservice.anomaly_detection.transformers import Preprocessor
 from ml_microservice.anomaly_detection import evaluators
-from ml_microservice.anomaly_detection.evaluators import GPEvaluator
-
 
 class LogicFacade():
     def __init__(self):
@@ -22,17 +20,18 @@ class LogicFacade():
 
 
     def convert_xml(self, id_patterns, ignore_patterns, store, 
-                    xml, group, override):
+                    xml, groupID, override):
+        self.logger.info(f"Xml2Csv: ignore: {ignore_patterns}, ids: {id_patterns}")
         x2c = Xml2Csv(
             ignore_patterns = ignore_patterns,
             id_patterns = id_patterns
         )
         dfs = x2c.parse(xml)
-        self.logger.debug("Parsings: {}".format(dfs))
+        self.logger.info("Parsings: {}".format(dfs))
         if store:
             ts_lib = TimeseriesLibrary()
             for dfID, df in dfs.items():
-                ts_lib.save(group, dfID, df, override)
+                ts_lib.save(groupID, dfID, df, override)
         return dfs
 
 
@@ -123,7 +122,6 @@ class LogicFacade():
         t0 = time.time()
         train_time = 0
         preproc = Preprocessor(ts)
-        preproc.train_test_split()
         ts_train, _ = preproc.train_test
         tuner.tune(ts_train)
 
@@ -189,7 +187,7 @@ class LogicFacade():
         ts = ts_lib.fetch_ts(groupID, dimID, tsID)
 
         factory = Factory()
-        evaluator = GPEvaluator(env)
+        evaluator = evaluators.GPEvaluator(env)
         loader = factory.get_loader(meta.model_type)
         
         t0 = time.time()

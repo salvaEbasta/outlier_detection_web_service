@@ -8,12 +8,11 @@ import pandas as pd
 from ml_microservice import configuration as old_cfg
 
 def compose_ts(values, dates):
-    tmp = {}
-    tmp[old_cfg.timeseries.value_column] = values
+    ts = pd.DataFrame()
+    ts[old_cfg.timeseries.value_column] = values
     if dates is None:
-        dates= [pd.to_datetime("today").normalize()]*len(values)
-    tmp[old_cfg.timeseries.date_column] = dates
-    ts = pd.DataFrame(tmp)
+        dates = [pd.to_datetime("today").normalize()]*len(values)
+    ts[old_cfg.timeseries.date_column] = dates
     return ts
 
 class TimeseriesLibrary:
@@ -149,5 +148,8 @@ class TimeseriesLibrary:
             df = old_df
         self.remove(group, dfID)
         df_path = self._2storage_path(group, dfID)[0]
+        group_path, _ = os.path.split(df_path)
+        if not os.path.exists(group_path):
+            os.makedirs(group_path)
         df.to_csv(df_path, index=False)
         return True
