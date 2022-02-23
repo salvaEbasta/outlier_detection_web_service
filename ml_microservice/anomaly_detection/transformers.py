@@ -66,7 +66,7 @@ class Preprocessor():
             y[i] = data[i + w : i + total_width]
         return X, y
     
-    def augment_dataset(self, X, y):
+    def _augment_dataset(self, X, y):
         """
             Augment the dataset by duplicating instances and introducing gaussian noise.\n
             X.shape: [D, ...]  , y: [D, ...] -> [2*D, ...] , [2*D, ...]

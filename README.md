@@ -33,3 +33,12 @@ python compose_timeseries.py <zipPath>
 ```
 The zip must contain the series, organized in groups of files xml.
 The script is located in the folder ```scripts```.
+
+## Tests
+The test suite developed for the service is available under the folder ```tests```.
+The suite is developed accordingly to the framework pytest.
+The environment contains all the dependencies to run the test suite.
+To run the suite once the environment is activated:
+```
+pytest
+```

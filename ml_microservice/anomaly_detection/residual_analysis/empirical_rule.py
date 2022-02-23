@@ -47,6 +47,6 @@ class EmpiricalRule(BaseEstimator, Persistent):
             os.makedirs(path_dir)
         f_path = os.path.join(
             path_dir, 
-            cfg.empRule.default_file
+            cfg.empRule["default_file"]
         )
         joblib.dump(self, f_path, compress = 3)

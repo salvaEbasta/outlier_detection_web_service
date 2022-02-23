@@ -1,11 +1,8 @@
 import os
-import shutil
 
-import pandas as pd
-
+from tests import TEST_DIR
 from ml_microservice import configuration as c
 from ml_microservice.conversion import Xml2Csv as x2c
-from tests import TEST_DIR
 
 XML_DIR = os.path.join(TEST_DIR, "xml")
 XML_PLURI = os.path.join(XML_DIR, 's5_2012_samples.xml')

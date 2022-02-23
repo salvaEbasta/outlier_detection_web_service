@@ -6,7 +6,7 @@ import pandas as pd
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import f1_score
 from tensorflow.keras import callbacks
-from kerastuner import Hyperband, Objective
+from keras_tuner import Hyperband, Objective
 
 from . import configuration as cfg
 from .transformers import Preprocessor

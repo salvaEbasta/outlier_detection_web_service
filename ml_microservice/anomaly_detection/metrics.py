@@ -9,9 +9,10 @@ def naive_prediction(X):
 
 def naive_metric(y_true, y_hat, y_naive):
     """
-    Better be < 1
+    Good model: has value < 1
     Returns:
     --------
     MSE(y_true, y_hat) / MSE(y_true, y_naive)
+    --------
     """
     return mean_squared_error(y_true, y_hat) / mean_squared_error(y_true, y_naive)
