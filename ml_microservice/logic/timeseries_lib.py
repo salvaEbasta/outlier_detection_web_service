@@ -25,6 +25,8 @@ class TimeseriesLibrary:
         self.logger = logging.getLogger('tsLib')
         self.logger.setLevel(logging.DEBUG)
         self.storage = path
+        if not os.path.exists(path):
+            os.makedirs(path)
         self.date_col = date_col
         self.value_col = value_col
         self.anom_col = anom_col
