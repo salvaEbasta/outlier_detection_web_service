@@ -42,3 +42,13 @@ To run the suite once the environment is activated:
 ```
 pytest
 ```
+
+## Timeseries analysis
+All the scripts used to
+- convert the timeseries and select the more significant ones (```extraction_selection.ipynb```)
+- train and tune the models (```training.ipynb```)
+- represent the results (```visualization.ipynb```)
+are included under the folder ```scripts/drive```.
+All of these scripts are Jupiter Notebooks for Google Colab.
+Some parameters must be changed (folders, abs paths, ...) in order to adapt the notebooks to the new environment.
+The .zip file in the same folders contains the original data samples, in xml format.
