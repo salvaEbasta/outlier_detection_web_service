@@ -258,8 +258,8 @@ plt.vlines(last_value, max(ts), min(ts), 'r')
 # Detector creation
 print("---------------Train Anomaly Detector----------------------")
 mid = 'demo'
-if mid in os.listdir(c.detectorTrainer.path):
-    shutil.rmtree(os.path.join(c.detectorTrainer.path, mid))
+if mid in os.listdir(c.detectLib.path):
+    shutil.rmtree(os.path.join(c.detectLib.path, mid))
 method = "WindowedGaussian"
 
 r = get(URL + "anomaly_detection").json()
@@ -418,5 +418,5 @@ for i, score in enumerate(eval_ts["outlier_score"]):
 if groupID in os.listdir(c.timeseries.path):
     shutil.rmtree(os.path.join(c.timeseries.path, groupID))
 
-if mid in os.listdir(c.detectorTrainer.path):
-    shutil.rmtree(os.path.join(c.detectorTrainer.path, mid))
+if mid in os.listdir(c.detectLib.path):
+    shutil.rmtree(os.path.join(c.detectLib.path, mid))
