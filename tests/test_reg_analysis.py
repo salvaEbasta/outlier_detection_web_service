@@ -27,14 +27,14 @@ def test_emp_rule_save_n_load():
     os.remove(file_path)
 
 def test_emp_rule():
-    shape0 = 20
+    shape0 = 200
     ts = pd.DataFrame()
     ts[cfg.cols["X"]] = np.random.normal(size=[shape0,])
     er = emp_r.EmpiricalRule()
     er.fit(ts)
     assert er.mean_ < 0.1
     print(er.var_)
-    assert 0.5 < er.var_ < 1.1
+    assert 0.75 < er.var_ < 1.25
     
     ts[cfg.cols["X"]] = 4 * np.ones(shape=[shape0,])
     y_hat = er.predict(ts)
