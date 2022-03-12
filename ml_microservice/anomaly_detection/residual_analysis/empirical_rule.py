@@ -1,5 +1,4 @@
 import joblib
-from math import sqrt
 import os
 
 import numpy as np

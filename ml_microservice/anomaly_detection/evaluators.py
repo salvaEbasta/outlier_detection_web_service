@@ -1,4 +1,3 @@
-from math import nan
 import os
 
 import numpy as np
